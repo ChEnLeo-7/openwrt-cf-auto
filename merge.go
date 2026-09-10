@@ -137,9 +137,13 @@ func mergeResults(oldContent string, rows []ResultRow, ledger map[string]int, cf
 		return a.Latency < b.Latency
 	}
 	passing := make([]ResultRow, 0, len(rows))
+	passingIP := map[string]bool{}
+	passingEP := map[string]bool{}
 	for _, r := range rows {
 		if r.Latency > 0 {
 			passing = append(passing, r)
+			passingIP[r.IP] = true
+			passingEP[r.EP()] = true
 		}
 	}
 	sort.Slice(passing, func(i, j int) bool { return less(passing[i], passing[j]) })
@@ -192,7 +196,7 @@ func mergeResults(oldContent string, rows []ResultRow, ledger map[string]int, cf
 	}
 	keptEP := map[string]bool{}
 	merged := make([]string, 0, cfg.MaxLines+8)
-	added, kept := 0, 0
+	added, kept, dropped := 0, 0, 0
 	for _, r := range selected {
 		merged = append(merged, r.EP())
 		keptEP[r.EP()] = true
@@ -200,22 +204,47 @@ func mergeResults(oldContent string, rows []ResultRow, ledger map[string]int, cf
 		ledger[r.EP()] = 0
 		added++
 	}
-	dropped := 0
-	for _, ep := range oldOrder {
-		if keptEP[ep] {
-			continue
+
+	if cfg.ResultMode == "merge" {
+		// 融合：老上榜 IP 本轮仍达标则保留靠后；未达标落榜计数，超限淘汰
+		for _, ep := range oldOrder {
+			if keptEP[ep] {
+				continue
+			}
+			ip := ep[:strings.Index(ep, ":")]
+			if passingIP[ip] {
+				if r, ok := rowsByEP[ep]; ok {
+					oldTags[ep] = renderTag(r, cfg.TagTemplate)
+				}
+				merged = append(merged, ep)
+				keptEP[ep] = true
+				ledger[ep] = 0
+				kept++
+			}
 		}
-		m := ledger[ep] + 1
-		if m >= cfg.MissLimit {
-			delete(ledger, ep)
-			delete(oldTags, ep)
-			dropped++
-			continue
+		for _, ep := range oldOrder {
+			if keptEP[ep] {
+				continue
+			}
+			m := ledger[ep] + 1
+			if m >= cfg.MissLimit {
+				delete(ledger, ep)
+				delete(oldTags, ep)
+				dropped++
+				continue
+			}
+			ledger[ep] = m
+			merged = append(merged, ep)
+			keptEP[ep] = true
+			kept++
 		}
-		ledger[ep] = m
-		merged = append(merged, ep)
-		keptEP[ep] = true
-		kept++
+	} else {
+		// 覆盖：完全以本轮结果为准，清理陈旧账本
+		for ep := range ledger {
+			if !keptEP[ep] {
+				delete(ledger, ep)
+			}
+		}
 	}
 	if len(merged) > cfg.MaxLines {
 		merged = merged[:cfg.MaxLines]

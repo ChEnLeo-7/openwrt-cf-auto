@@ -18,6 +18,7 @@ const I18N = {
     "cfg.source_h":"优选来源","source.custom":"自定义优选源","source.official":"CF 官方网段","source.ph":"每行一个优选 URL","source.hint":"拉取各来源后合并去重，再从你的线路进行二次优选。","source.official_note":"实时获取 Cloudflare 官方 IPv4 网段，与 CloudflareSpeedTest 默认方式一致。覆盖最全，但单轮耗时更长。",
     "cfg.region_h":"区域定向（真实落地机房）","cfg.region_en":"启用区域过滤","cfg.colo_ph":"输入代码，或 CODE|名称（如 SIN|新加坡）","cfg.add":"添加","cfg.region_hint":"可单选或多选；每个地区独立测速。按钮显示“代码 | 地区”解释，未知代码也可自定义名称。","cfg.min_region":"每地区最少上榜数",
     "cfg.ports_h":"测速端口","cfg.port_ph":"自定义端口","cfg.policy_h":"结果策略","cfg.topn":"本轮 TopN","cfg.maxlines":"结果行数上限","cfg.miss":"连续落榜淘汰轮数",
+    "rmode.overwrite":"覆盖更新","rmode.merge":"融合更新","rmode.hint.overwrite":"每轮把最新结果整理成独立 txt 直接覆盖整个文件 — 节点池完全跟随最新实测。","rmode.hint.merge":"新结果与旧榜融合：老 IP 仍达标则保留靠后，连续落榜才淘汰 — 节点池平滑演进。",
     "cfg.tag_h":"节点信息模板","cfg.tag_sub":"# 后显示内容","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"变量：{region} 地区代码 · {latency} 延迟 · {speed} 带宽（自带 MB/s）· {date} 日期。空段自动省略。",
     "cfg.params_h":"CloudflareSpeedTest 参数","cfg.tl":"平均延迟上限 -tl (ms)","cfg.tll":"平均延迟下限 -tll (ms)","cfg.dn":"下载测速数量 -dn","cfg.dt":"单 IP 测速时长 -dt (秒)","cfg.url":"下载测速地址","cfg.extra":"高级附加参数","cfg.extra_ph":"原样追加，如 -t 200",
     "cfg.sched_h":"定时更新","cfg.sched_en":"自动优选并更新 Gist","cfg.sched_int":"更新间隔（小时）","cfg.sched_hint":"到点按当前优选方式、来源、地区和端口执行完整一轮。","cfg.appupdate_h":"程序更新","cfg.appupdate_hint":"打开面板时自动检测一次更新，发现新版本会弹出双语 Release 说明。","cfg.save":"保存设置",
@@ -39,6 +40,7 @@ const I18N = {
     "cfg.source_h":"Candidate source","source.custom":"Custom preferred-IP URLs","source.official":"Official CF ranges","source.ph":"One preferred-IP URL per line","source.hint":"Fetch, merge, and deduplicate public candidates, then re-test them from your own network.","source.official_note":"Fetches current Cloudflare IPv4 ranges, matching CloudflareSpeedTest's default workflow. Complete but slower.",
     "cfg.region_h":"Region targeting (real edge colo)","cfg.region_en":"Enable region filtering","cfg.colo_ph":"Enter CODE or CODE|Name, e.g. SIN|Singapore","cfg.add":"Add","cfg.region_hint":"Select one or more colos; each is tested separately. Buttons show “code | location”; unknown codes may have custom names.","cfg.min_region":"Minimum results per region",
     "cfg.ports_h":"Test ports","cfg.port_ph":"Custom port","cfg.policy_h":"Result policy","cfg.topn":"Top N this run","cfg.maxlines":"Maximum result lines","cfg.miss":"Misses before eviction",
+    "rmode.overwrite":"Overwrite","rmode.merge":"Merge","rmode.hint.overwrite":"Each run rebuilds a fresh file from the latest results and overwrites the board — the pool always mirrors the newest test.","rmode.hint.merge":"New results merge with the previous board: qualified old IPs stay behind the new ones and are evicted only after repeated misses — smooth evolution.",
     "cfg.tag_h":"Node label template","cfg.tag_sub":"text after #","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"Variables: {region}, {latency}, {speed} (includes MB/s), and {date}. Empty segments are removed.",
     "cfg.params_h":"CloudflareSpeedTest parameters","cfg.tl":"Maximum average latency -tl (ms)","cfg.tll":"Minimum average latency -tll (ms)","cfg.dn":"Download test count -dn","cfg.dt":"Test duration per IP -dt (seconds)","cfg.url":"Download test URL","cfg.extra":"Advanced extra arguments","cfg.extra_ph":"Passed through as-is, e.g. -t 200",
     "cfg.sched_h":"Scheduled update","cfg.sched_en":"Automatically optimize and update Gist","cfg.sched_int":"Update interval (hours)","cfg.sched_hint":"Runs a full optimization using the current method, source, regions, and ports.","cfg.appupdate_h":"Application updates","cfg.appupdate_hint":"Checks for updates automatically each time the panel opens; a bilingual notes dialog appears when a new version is found.","cfg.save":"Save settings",
@@ -79,6 +81,7 @@ function applyI18n() {
   if (tokenSaved) $("cfg-g-token").placeholder = t("gist.token_saved_ph");
   themeIcon();
   updateMethodHint();
+  updateResultmodeHint();
   rerenderChips();
   renderLog();
   refreshStatus();
@@ -285,7 +288,17 @@ function updateMethodHint() {
   const selected = document.querySelector("#seg-method button.on");
   $("method-hint").textContent = t(selected && selected.dataset.v === "bandwidth" ? "method.hint.bandwidth" : "method.hint.latency");
 }
-bindSeg("seg-method", updateMethodHint);
+function applyMethodVisibility(method) {
+  document.querySelectorAll(".bw-only").forEach(el => el.classList.toggle("hide", method !== "bandwidth"));
+}
+function updateResultmodeHint() {
+  const selected = document.querySelector("#seg-resultmode button.on");
+  const merge = selected && selected.dataset.v === "merge";
+  $("resultmode-hint").textContent = t(merge ? "rmode.hint.merge" : "rmode.hint.overwrite");
+  $("lbl-miss").classList.toggle("hide", !merge);
+}
+bindSeg("seg-method", v => { updateMethodHint(); applyMethodVisibility(v); });
+bindSeg("seg-resultmode", updateResultmodeHint);
 bindSeg("seg-source", v => {
   $("src-custom").classList.toggle("hide", v !== "custom");
   $("src-official").classList.toggle("hide", v !== "official");
@@ -356,6 +369,9 @@ $("btn-add-colo").onclick = () => {
 function fillConfig(c) {
   document.querySelectorAll("#seg-method button").forEach(b => b.classList.toggle("on", b.dataset.v === c.method));
   document.querySelectorAll("#seg-source button").forEach(b => b.classList.toggle("on", b.dataset.v === c.source_mode));
+  applyMethodVisibility(c.method);
+  document.querySelectorAll("#seg-resultmode button").forEach(b => b.classList.toggle("on", (c.result_mode || "overwrite") === b.dataset.v));
+  updateResultmodeHint();
   $("src-custom").classList.toggle("hide", c.source_mode !== "custom");
   $("src-official").classList.toggle("hide", c.source_mode !== "official");
   $("cfg-sources").value = (c.sources || []).join("\n");
@@ -393,6 +409,7 @@ function collectCfg() {
     ports: $("cfg-ports")._selected || [],
     method: document.querySelector("#seg-method button.on").dataset.v,
     source_mode: document.querySelector("#seg-source button.on").dataset.v,
+    result_mode: (document.querySelector("#seg-resultmode button.on") || {}).dataset.v || "overwrite",
     region: {
       enabled: $("cfg-region-en").checked,
       colos: $("cfg-colos")._selected || [],

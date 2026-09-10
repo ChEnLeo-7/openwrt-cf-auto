@@ -40,10 +40,11 @@ type GistCfg struct {
 }
 
 type Config struct {
-	Listen      string       `json:"listen"`
-	Method      string       `json:"method"`      // latency | bandwidth
-	SourceMode  string       `json:"source_mode"` // custom | official
-	Sources     []string     `json:"sources"`
+	Listen      string      `json:"listen"`
+	Method      string      `json:"method"`       // latency | bandwidth
+	SourceMode  string      `json:"source_mode"`  // custom | official
+	ResultMode  string      `json:"result_mode"`  // overwrite | merge
+	Sources     []string    `json:"sources"`
 	Ports       []int        `json:"ports"`
 	TopN        int          `json:"top_n"`
 	MaxLines    int          `json:"max_lines"`
@@ -97,6 +98,7 @@ func defaultConfig() *Config {
 		Listen:      ":7800",
 		Method:      "latency",
 		SourceMode:  "custom",
+		ResultMode:  "overwrite",
 		Sources:     []string{},
 		Ports:       []int{443},
 		TopN:        10,
@@ -138,6 +140,9 @@ func (c *Config) normalize() {
 	}
 	if c.SourceMode != "official" {
 		c.SourceMode = "custom"
+	}
+	if c.ResultMode != "merge" {
+		c.ResultMode = "overwrite"
 	}
 	if len(c.Ports) == 0 {
 		c.Ports = []int{443}
