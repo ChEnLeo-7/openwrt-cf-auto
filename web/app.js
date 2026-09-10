@@ -80,6 +80,7 @@ function applyI18n() {
   themeIcon();
   updateMethodHint();
   rerenderChips();
+  renderLog();
   refreshStatus();
   refreshResults();
 }
@@ -169,16 +170,102 @@ async function refreshResults() {
 }
 setInterval(refreshResults, 8000);
 
+/* ================= 日志英文转译（切换语言时对近期日志重渲染） ================= */
+const LOG_EN = [
+  [/======== 优选开始（方式 (\S+) \/ 来源 (\S+)）========/g, "======== Run started (method $1 / source $2) ========"],
+  [/======== 优选完成：上榜 (\d+)（新增 (\d+) 保留 (\d+) 淘汰 (\d+)）耗时 (\S+) ========/g,
+   "======== Run completed: listed $1 (added $2, kept $3, dropped $4) took $5 ========"],
+  [/======== 优选开始/g, "======== Run started"],
+  [/======== 优选完成/g, "======== Run completed"],
+  [/优选异常结束[:：]?/g, "Run failed: "],
+  [/cf-auto (v[\d.]+) 启动 \| 配置[:：](\S+) \| 面板[:：](\S+) \| 引擎[:：](\S+) \(([^)]+)\)/g,
+   "cf-auto $1 started | config: $2 | panel: $3 | engine: $4 ($5)"],
+  [/\[定时更新\] 到期，自动触发（间隔 (\d+) 小时）/g, "[Scheduler] due, auto-triggered (interval $1 h)"],
+  [/\[配置\] 已更新：方式 (\S+) \/ 来源 (\S+) \/ 源 (\d+) 个 \/ 端口 (\[[^\]]*\]) \/ 地区过滤 (\S+) \/ Top(\d+)/g,
+   "[Config] updated: method $1 / source $2 / $3 sources / ports $4 / region filter $5 / Top$6"],
+  [/\[候选池\] 拉取失败/g, "[Pool] fetch failed"],
+  [/(\d+) 个源成功，去重后 (\d+) 个候选 IP/g, "$1 sources fetched, deduped to $2 candidate IPs"],
+  [/Cloudflare 官方网段获取成功[:：](\d+) 个 CIDR/g, "official Cloudflare ranges fetched: $1 CIDRs"],
+  [/在线获取官方网段失败，使用内嵌快照/g, "official ranges fetch failed; using embedded snapshot"],
+  [/\[引擎\] 端口 (\d+) 机房 (\S+) 模式 (\S+) 启动 cfst/g, "[Engine] port $1 colo $2 mode $3 starting cfst"],
+  [/\[引擎\] 端口 (\d+) 模式 (\S+) 启动 cfst/g, "[Engine] port $1 mode $2 starting cfst"],
+  [/端口 (\d+) 解析到 (\d+) 条有效结果/g, "port $1 parsed $2 valid results"],
+  [/\[引擎\] 端口 (\d+) 机房 (\S+) 测速失败/g, "[Engine] port $1 colo $2 test failed"],
+  [/测速超时被终止/g, "test aborted by timeout"],
+  [/cfst 退出异常/g, "cfst exited abnormally"],
+  [/打开结果 CSV 失败/g, "failed to open result CSV"],
+  [/测速引擎不存在/g, "test engine missing"],
+  [/测速引擎正忙，请稍后再试/g, "test engine is busy, try again shortly"],
+  [/所有优选源均拉取失败/g, "all preferred sources failed to fetch"],
+  [/本轮无任何有效测速结果（候选池、阈值或机房过滤过严？）/g, "no valid results this round (empty pool, or thresholds/colo filter too strict?)"],
+  [/优选源列表为空，请先在面板配置（或切换为 CF 官方源模式）/g, "source list is empty; configure it in the panel or switch to official CF ranges"],
+  [/优选完成但上传失败/g, "optimization finished but upload failed"],
+  [/\[Gist\] 已上传 (\S+) \((\d+) 行\)/g, "[Gist] uploaded $1 ($2 lines)"],
+  [/\[Gist\] 上传失败/g, "[Gist] upload failed"],
+  [/\[Gist\] 读取现有结果失败（将全新开始）/g, "[Gist] failed to read existing result (starting fresh)"],
+  [/\[Gist\] 未配置 Token\/GistID，结果仅保存在本地/g, "[Gist] token/GistID not set; result saved locally only"],
+  [/\[Gist\] 手动重传 (\S+) 成功/g, "[Gist] manual re-upload of $1 succeeded"],
+  [/\[程序更新\] 已下载 (\S+)，将在 2 秒后安装并重启服务/g, "[App update] downloaded $1; installing in 2 s, service will restart"],
+  [/\[程序更新\] 自动更新失败/g, "[App update] auto-update failed"],
+  [/\[引擎升级\] 当前 (\S+)，查询最新版/g, "[Engine update] current $1, checking latest…"],
+  [/\[引擎升级\] 已是最新版 (\S+)/g, "[Engine update] already up to date $1"],
+  [/\[引擎升级\] 直连下载失败，尝试 gh-proxy 加速/g, "[Engine update] direct download failed, retrying via gh-proxy"],
+  [/\[引擎升级\] 备份旧引擎失败/g, "[Engine update] failed to back up old engine"],
+  [/\[引擎升级\] 安装新引擎失败（已回滚）/g, "[Engine update] failed to install new engine (rolled back)"],
+  [/\[引擎升级\] 新引擎校验失败（得到 (\S+)，已回滚）/g, "[Engine update] new engine verification failed (got $1, rolled back)"],
+  [/\[引擎升级\] 成功升级到 (\S+)/g, "[Engine update] upgraded to $1"],
+  [/\[引擎升级\] 下载失败/g, "[Engine update] download failed"],
+  [/\[引擎升级\] 解压失败/g, "[Engine update] extraction failed"],
+  [/解压包中未找到 cfst 二进制/g, "cfst binary not found in the archive"],
+  [/启动安装失败/g, "failed to start installer"],
+  [/查询最新版失败/g, "failed to query latest version"],
+  [/已下载 (\S+)，将在 2 秒后安装并重启服务/g, "downloaded $1; installing in 2 s, service will restart"],
+  [/(\d+) 条有效结果/g, "$1 valid results"],
+  [/机房 (\S+)/g, "colo $1"],
+  [/端口 (\d+)/g, "port $1"],
+  [/模式 (\S+)/g, "mode $1"],
+  [/方式 (\S+)/g, "method $1"],
+  [/来源 (\S+)/g, "source $1"],
+  [/耗时 (\S+)/g, "took $1"],
+  [/上榜 (\d+)/g, "listed $1"],
+  [/新增 (\d+)/g, "added $1"],
+  [/保留 (\d+)/g, "kept $1"],
+  [/淘汰 (\d+)/g, "dropped $1"],
+  [/测速失败/g, "test failed"],
+  [/上传失败/g, "upload failed"],
+  [/下载失败/g, "download failed"],
+  [/拉取失败/g, "fetch failed"],
+  [/\[候选池\]/g, "[Pool]"],
+  [/\[引擎\]/g, "[Engine]"],
+  [/\[配置\]/g, "[Config]"],
+  [/\[程序更新\]/g, "[App update]"],
+  [/\[引擎升级\]/g, "[Engine update]"],
+  [/\[定时更新\]/g, "[Scheduler]"],
+];
+function zhToEn(line) {
+  let out = line;
+  for (const [re, rep] of LOG_EN) out = out.replace(re, rep);
+  return out;
+}
+
 /* ================= 日志 ================= */
+let rawLog = [];
+function renderLog() {
+  const box = $("logbox");
+  const lines = rawLog.map(l => LANG === "en" ? zhToEn(l) : l);
+  box.textContent = lines.join("\n");
+  box.scrollTop = box.scrollHeight;
+}
 async function refreshLogs(reset) {
-  if (reset) logNext = -1;
+  if (reset) { logNext = -1; rawLog = []; }
   try {
     const r = await api("/api/logs?after=" + logNext);
     if (r.lines.length) {
-      $("logbox").textContent += r.lines.join("\n") + "\n";
-      $("logbox").scrollTop = $("logbox").scrollHeight;
+      rawLog.push(...r.lines);
+      if (rawLog.length > 800) rawLog = rawLog.slice(-800);
     }
     logNext = r.next;
+    if (r.lines.length || reset) renderLog();
   } catch (e) { /* ignore */ }
 }
 setInterval(() => { if ($("log-auto").checked && $("tab-logs").classList.contains("active")) refreshLogs(false); }, 3000);
