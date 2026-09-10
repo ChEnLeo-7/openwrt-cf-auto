@@ -16,7 +16,7 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 var configPath string
 var cfgPtr atomic.Pointer[Config]
@@ -175,12 +175,34 @@ func apiUpload(w http.ResponseWriter, r *http.Request) {
 
 func apiEngineInfo(w http.ResponseWriter, r *http.Request) {
 	c := cur()
-	latest, _ := engineLatestVersion(c.Gist.ProxyURL)
+	latest, _ := cfstLatestVersion(c.Gist.ProxyURL)
 	writeJSON(w, engineInfo{
 		Current: engineCurrentVersion(),
 		Latest:  latest,
 		Path:    cfstPath(),
 	})
+}
+
+func apiAppRelease(w http.ResponseWriter, r *http.Request) {
+	c := cur()
+	rel, err := appLatestRelease(c.Gist.ProxyURL)
+	if err != nil {
+		writeErr(w, 502, err.Error())
+		return
+	}
+	writeJSON(w, map[string]interface{}{"tag": rel.Tag, "body": rel.Body, "url": rel.URL, "update_available": isNewerVersion(Version, rel.Tag)})
+}
+
+func apiAppUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if err := appUpdate(cur()); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, map[string]interface{}{"ok": true})
 }
 
 func apiEngineUpdate(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +235,7 @@ func main() {
 		Version, configPath, c.Listen, engineCurrentVersion(), cfstPath())
 
 	go scheduleLoop()
+	go appUpdateLoop()
 
 	sub, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -241,6 +264,8 @@ func main() {
 		}
 		apiEngineInfo(w, r)
 	})
+	mux.HandleFunc("/api/apprelease", apiAppRelease)
+	mux.HandleFunc("/api/appupdate", apiAppUpdate)
 
 	if err := http.ListenAndServe(c.Listen, mux); err != nil {
 		fmt.Println("HTTP 服务失败:", err)

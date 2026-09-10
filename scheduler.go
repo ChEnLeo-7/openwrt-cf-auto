@@ -15,27 +15,27 @@ type ScheduleStatus struct {
 }
 
 var (
-	resultMu    sync.RWMutex
-	lastRunAt   time.Time
-	lastOK      bool
-	running     bool
-	lastResult  ResultStats
+	resultMu   sync.RWMutex
+	lastRunAt  time.Time
+	lastOK     bool
+	running    bool
+	lastResult ResultStats
 )
 
 func tryRun() (bool, error) {
-	schedMu2.Lock()
+	resultMu.Lock()
 	if running {
-		schedMu2.Unlock()
+		resultMu.Unlock()
 		return false, errRunning
 	}
 	running = true
-	schedMu2.Unlock()
+	resultMu.Unlock()
 
 	go func() {
 		defer func() {
-			schedMu2.Lock()
+			resultMu.Lock()
 			running = false
-			schedMu2.Unlock()
+			resultMu.Unlock()
 		}()
 		err := RunOnce(cur())
 		resultMu.Lock()
@@ -54,8 +54,6 @@ var errRunning = &staticError{"优选正在运行中"}
 type staticError struct{ s string }
 
 func (e *staticError) Error() string { return e.s }
-
-var schedMu2 sync.Mutex
 
 func scheduleLoop() {
 	tick := time.NewTicker(30 * time.Second)
@@ -93,12 +91,9 @@ func scheduleStatus(cfg *Config) ScheduleStatus {
 		LastOK:        ok,
 	}
 	if last.IsZero() {
-		st.LastRun = "从未"
+		st.LastRun = ""
 		next := time.Now().Add(30 * time.Second)
 		st.NextRun = next.Format("01-02 15:04")
-		if cfg.Schedule.Enabled {
-			st.LastRun = "从未（启动后自动首跑）"
-		}
 	} else {
 		st.LastRun = last.Format("01-02 15:04")
 		st.NextRun = last.Add(time.Duration(cfg.Schedule.IntervalHours) * time.Hour).Format("01-02 15:04")

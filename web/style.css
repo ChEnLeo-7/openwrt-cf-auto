@@ -46,8 +46,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 
   display: flex; align-items: center; justify-content: space-between;
   max-width: 880px; margin: 0 auto;
 }
-.brand { display: flex; align-items: baseline; gap: 8px; }
-.brand-mark { color: var(--accent); font-size: 17px; }
+.brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brand-logo { width: 34px; height: 34px; flex: none; border-radius: var(--r-sm); object-fit: cover; }
 .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
 .brand-sub { font-size: 12px; color: var(--txt2); }
 .icon-btn {
@@ -198,3 +198,38 @@ footer { text-align: center; color: var(--txt3); font-size: 12px; padding: 18px;
   .topbar { padding: 10px 14px; }
   .seg-nav { margin: 12px 14px 0; }
 }
+
+/* ---- 顶栏操作区 / 语言按钮 ---- */
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.lang-btn { width: auto; padding: 0 12px; border-radius: 15px; font-size: 12.5px; font-weight: 600; }
+
+/* ---- 开关行（紧凑） ---- */
+.switch-row.slim { max-width: none; padding: 10px 16px; margin: 8px 0; }
+.flex1 { flex: 1; max-width: 320px; }
+.inline-number { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.inline-number input { width: 72px; margin: 0; }
+.modal-card a.btn-primary { display: inline-block; text-decoration: none; }
+
+/* ---- Release 弹窗：Apple 式 sheet ---- */
+.modal-scrim {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: scrim-in 200ms var(--ease);
+}
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+.modal-card {
+  width: 100%; max-width: 560px; max-height: 82vh; overflow: auto;
+  background: var(--surface-solid); border: 1px solid var(--hairline);
+  border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 22px 24px;
+  animation: sheet-in 280ms var(--spring);
+}
+@keyframes sheet-in { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .modal-card { animation: none; } .modal-scrim { animation: none; } }
+.modal-card h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+.release-body {
+  font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-word;
+  background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  padding: 12px 14px; max-height: 40vh; overflow: auto; color: var(--txt2);
+}
+.release-body a { color: var(--accent); }

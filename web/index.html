@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>cf-auto</title>
+<link rel="icon" href="favicon.ico">
+<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="stylesheet" href="style.css">
 <script>
   (function(){var t=localStorage.getItem('cf-theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=t;})();
@@ -13,158 +15,191 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
-      <span class="brand-mark">◎</span>
+      <img class="brand-logo" src="assets/cf-auto-logo.webp" alt="" width="34" height="34">
       <span class="brand-name">cf-auto</span>
       <span class="brand-sub" id="hdr-status">…</span>
     </div>
-    <button id="theme-toggle" class="icon-btn" title="切换浅色 / 深色"></button>
+    <div class="topbar-actions">
+      <button id="lang-toggle" class="icon-btn lang-btn" title="Language"></button>
+      <button id="theme-toggle" class="icon-btn" title=""></button>
+    </div>
   </div>
 </header>
 
 <nav class="seg-nav" role="tablist">
-  <button class="seg-item active" data-tab="dash">概览</button>
-  <button class="seg-item" data-tab="cfg">优选设置</button>
-  <button class="seg-item" data-tab="gist">GitHub</button>
-  <button class="seg-item" data-tab="logs">日志</button>
+  <button class="seg-item on" data-tab="dash" data-i18n="tab.dash"></button>
+  <button class="seg-item" data-tab="cfg" data-i18n="tab.cfg"></button>
+  <button class="seg-item" data-tab="gist" data-i18n="tab.gist"></button>
+  <button class="seg-item" data-tab="logs" data-i18n="tab.logs"></button>
 </nav>
 
 <main>
 <!-- ================= 概览 ================= -->
 <section id="tab-dash" class="panel active">
   <div class="run-row">
-    <button id="btn-run" class="btn-primary">开始优选</button>
-    <button id="btn-reupload" class="btn-ghost">重传结果</button>
+    <button id="btn-run" class="btn-primary" data-i18n="dash.run"></button>
+    <button id="btn-reupload" class="btn-ghost" data-i18n="dash.reupload"></button>
     <div class="run-meta" id="run-meta"></div>
   </div>
 
   <div class="cards">
-    <div class="card"><div class="k">程序版本</div><div class="v" id="st-version">—</div></div>
-    <div class="card"><div class="k">测速引擎</div><div class="v" id="st-engine">—</div></div>
-    <div class="card"><div class="k">定时更新</div><div class="v" id="st-sched">—</div></div>
-    <div class="card"><div class="k">Gist</div><div class="v" id="st-gist">—</div></div>
+    <div class="card"><div class="k" data-i18n="card.version"></div><div class="v" id="st-version">—</div></div>
+    <div class="card"><div class="k" data-i18n="card.engine"></div><div class="v" id="st-engine">—</div></div>
+    <div class="card"><div class="k" data-i18n="card.schedule"></div><div class="v" id="st-sched">—</div></div>
+    <div class="card"><div class="k" data-i18n="card.gist"></div><div class="v" id="st-gist">—</div></div>
   </div>
 
-  <h2>最近优选结果 <span class="h-sub" id="result-meta"></span></h2>
+  <h2><span data-i18n="dash.results"></span><span class="h-sub" id="result-meta"></span></h2>
   <div class="table-wrap">
     <table class="result-table" id="result-table">
-      <thead><tr><th>#</th><th>节点</th><th>地区</th><th>延迟</th><th>带宽</th></tr></thead>
+      <thead><tr>
+        <th data-i18n="tbl.idx"></th><th data-i18n="tbl.node"></th><th data-i18n="tbl.region"></th>
+        <th data-i18n="tbl.latency"></th><th data-i18n="tbl.bandwidth"></th>
+      </tr></thead>
       <tbody></tbody>
     </table>
-    <div id="result-empty" class="empty">尚无结果 — 点击「开始优选」跑一轮完整流程。</div>
+    <div id="result-empty" class="empty" data-i18n="dash.empty"></div>
   </div>
 
-  <h2>引擎升级 <span class="h-sub">CloudflareSpeedTest</span></h2>
+  <h2><span data-i18n="dash.engine_h"></span><span class="h-sub">CloudflareSpeedTest</span></h2>
   <div class="card engine-card">
-    <span>当前 <b id="eng-current">—</b></span>
-    <span>最新 <b id="eng-latest">—</b></span>
+    <span><span data-i18n="eng.current"></span> <b id="eng-current">—</b></span>
+    <span><span data-i18n="eng.latest"></span> <b id="eng-latest">—</b></span>
     <span class="grow"></span>
-    <button class="btn-ghost" id="btn-engine-check">检查更新</button>
-    <button class="btn-ghost" id="btn-engine-update">升级</button>
+    <button class="btn-ghost" id="btn-engine-check" data-i18n="eng.check"></button>
+    <button class="btn-ghost" id="btn-engine-update" data-i18n="eng.update"></button>
   </div>
   <div class="msg" id="eng-msg"></div>
 </section>
 
 <!-- ================= 优选设置 ================= -->
 <section id="tab-cfg" class="panel">
-  <h2>优选方式</h2>
+  <h2 data-i18n="cfg.method_h"></h2>
   <div class="seg-ctl" id="seg-method">
-    <button data-v="latency" class="on">按延迟优选</button>
-    <button data-v="bandwidth">按带宽优选</button>
+    <button data-v="latency" class="on" data-i18n="method.latency"></button>
+    <button data-v="bandwidth" data-i18n="method.bandwidth"></button>
   </div>
-  <div class="hint" id="method-hint">对候选 IP 做 TCP 延迟测试，速度最快、零流量。</div>
+  <div class="hint" id="method-hint"></div>
 
-  <h2>优选来源</h2>
+  <h2 data-i18n="cfg.source_h"></h2>
   <div class="seg-ctl" id="seg-source">
-    <button data-v="custom" class="on">自定义优选源</button>
-    <button data-v="official">CF 官方网段</button>
+    <button data-v="custom" class="on" data-i18n="source.custom"></button>
+    <button data-v="official" data-i18n="source.official"></button>
   </div>
   <div id="src-custom">
-    <textarea id="cfg-sources" rows="6" placeholder="https://bestcf.pages.dev/cmliu/all.txt&#10;https://ips.gaoji.uk/best_ips.txt"></textarea>
-    <div class="hint">每行一个优选 IP 列表地址；程序拉取合并去重后做二次精选。</div>
+    <textarea id="cfg-sources" rows="6" data-i18n-ph="source.ph"></textarea>
+    <div class="hint" data-i18n="source.hint"></div>
   </div>
   <div id="src-official" class="hide">
-    <div class="note">从 Cloudflare 官方 API 实时拉取全部 IP 网段（与 CloudflareSpeedTest 默认方式相同）展开测试。覆盖最全，但单轮耗时数十分钟，适合低频深度优选。</div>
+    <div class="note" data-i18n="source.official_note"></div>
   </div>
 
-  <h2>区域定向（按真实落地机房）</h2>
-  <label class="switch-row"><span>启用区域过滤</span><span class="switch"><input type="checkbox" id="cfg-region-en"><i></i></span></label>
+  <h2 data-i18n="cfg.region_h"></h2>
+  <label class="switch-row"><span data-i18n="cfg.region_en"></span><span class="switch"><input type="checkbox" id="cfg-region-en"><i></i></span></label>
   <div id="region-box" class="hide">
     <div class="chips" id="cfg-colos"></div>
-    <div class="hint">可多选；使用 HTTPING 读取真实落地机房（比地区标注可靠），每地区独立测速一轮，耗时相应增加。常用：SIN 新加坡 · NRT 东京 · KIX 大阪 · HKG 香港 · LAX 洛杉矶。</div>
+    <div class="btnrow">
+      <input type="text" id="cfg-colo-custom" data-i18n-ph="cfg.colo_ph" class="flex1">
+      <button class="btn-ghost" id="btn-add-colo" data-i18n="cfg.add"></button>
+    </div>
+    <div class="hint" data-i18n="cfg.region_hint"></div>
     <div class="grid3">
-      <label>每地区最少上榜数<input type="number" id="cfg-min-region" min="0" max="20"></label>
+      <label><span data-i18n="cfg.min_region"></span><input type="number" id="cfg-min-region" min="0" max="20"></label>
     </div>
   </div>
 
-  <h2>测速端口</h2>
+  <h2 data-i18n="cfg.ports_h"></h2>
   <div class="chips" id="cfg-ports"></div>
-  <div class="btnrow"><input type="number" id="cfg-port-custom" placeholder="自定义端口" min="1" max="65535"><button class="btn-ghost" id="btn-add-port">添加</button></div>
+  <div class="btnrow"><input type="number" id="cfg-port-custom" data-i18n-ph="cfg.port_ph" min="1" max="65535"><button class="btn-ghost" id="btn-add-port" data-i18n="cfg.add"></button></div>
 
-  <h2>结果策略</h2>
+  <h2 data-i18n="cfg.policy_h"></h2>
   <div class="grid3">
-    <label>上榜数量 TopN<input type="number" id="cfg-topn" min="1" max="50"></label>
-    <label>结果行数上限<input type="number" id="cfg-maxlines" min="5" max="100"></label>
-    <label>连续落榜淘汰轮数<input type="number" id="cfg-miss" min="1" max="20"></label>
+    <label><span data-i18n="cfg.topn"></span><input type="number" id="cfg-topn" min="1" max="50"></label>
+    <label><span data-i18n="cfg.maxlines"></span><input type="number" id="cfg-maxlines" min="5" max="100"></label>
+    <label><span data-i18n="cfg.miss"></span><input type="number" id="cfg-miss" min="1" max="20"></label>
   </div>
 
-  <h2>节点信息模板 <span class="h-sub"># 后显示的内容</span></h2>
-  <input type="text" id="cfg-tag" placeholder="cf-auto | {region} | {latency}ms | {speed}">
-  <div class="hint">可用变量：{region} 地区 · {latency} 延迟毫秒 · {speed} 带宽（自带 MB/s 单位）· {date} 日期。空缺变量所在段自动省略。</div>
+  <h2><span data-i18n="cfg.tag_h"></span><span class="h-sub" data-i18n="cfg.tag_sub"></span></h2>
+  <input type="text" id="cfg-tag" data-i18n-ph="cfg.tag_ph">
+  <div class="hint" data-i18n="cfg.tag_hint"></div>
 
-  <h2>测速参数</h2>
+  <h2 data-i18n="cfg.params_h"></h2>
   <div class="grid3">
-    <label>平均延迟上限 -tl (ms)<input type="number" id="cfg-cf-tl" min="0"></label>
-    <label>平均延迟下限 -tll (ms)<input type="number" id="cfg-cf-tll" min="0"></label>
-    <label>下载测速数量 -dn<input type="number" id="cfg-cf-dn" min="1" max="50"></label>
-    <label>每 IP 测速时长 -dt (秒)<input type="number" id="cfg-cf-dt" min="1" max="30"></label>
+    <label><span data-i18n="cfg.tl"></span><input type="number" id="cfg-cf-tl" min="0"></label>
+    <label><span data-i18n="cfg.tll"></span><input type="number" id="cfg-cf-tll" min="0"></label>
+    <label><span data-i18n="cfg.dn"></span><input type="number" id="cfg-cf-dn" min="1" max="50"></label>
+    <label><span data-i18n="cfg.dt"></span><input type="number" id="cfg-cf-dt" min="1" max="30"></label>
   </div>
-  <label class="lbl">下载测速地址<input type="text" id="cfg-cf-url"></label>
-  <label class="lbl">高级附加参数<input type="text" id="cfg-cf-extra" placeholder="原样追加给 cfst，如 -t 200"></label>
+  <label class="lbl"><span data-i18n="cfg.url"></span><input type="text" id="cfg-cf-url"></label>
+  <label class="lbl"><span data-i18n="cfg.extra"></span><input type="text" id="cfg-cf-extra" data-i18n-ph="cfg.extra_ph"></label>
 
-  <h2>定时更新</h2>
-  <label class="switch-row"><span>自动定时优选并更新 Gist</span><span class="switch"><input type="checkbox" id="cfg-sched-en"><i></i></span></label>
+  <h2 data-i18n="cfg.sched_h"></h2>
+  <label class="switch-row"><span data-i18n="cfg.sched_en"></span><span class="switch"><input type="checkbox" id="cfg-sched-en"><i></i></span></label>
   <div class="grid3" id="sched-box">
-    <label>更新间隔（小时）<input type="number" id="cfg-sched-int" min="1" max="48"></label>
+    <label><span data-i18n="cfg.sched_int"></span><input type="number" id="cfg-sched-int" min="1" max="48"></label>
   </div>
-  <div class="hint">到点自动执行一轮完整优选（按上方选定的方式、来源与地区），并上传结果。</div>
+  <div class="hint" data-i18n="cfg.sched_hint"></div>
 
-  <div class="btnrow big"><button class="btn-primary" id="btn-save-cfg">保存设置</button><span class="msg" id="cfg-msg"></span></div>
+  <h2 data-i18n="cfg.appupdate_h"></h2>
+  <div class="card switch-row slim">
+    <span data-i18n="eng.autoupdate"></span>
+    <label class="inline-number"><span data-i18n="eng.checkhours"></span><input type="number" id="cfg-update-hours" min="1" max="168"></label>
+    <button class="btn-ghost" id="btn-app-check" data-i18n="app.check"></button>
+    <span class="switch"><input type="checkbox" id="cfg-autoupdate"><i></i></span>
+  </div>
+  <div class="hint" data-i18n="cfg.appupdate_hint"></div>
+
+  <div class="btnrow big"><button class="btn-primary" id="btn-save-cfg" data-i18n="cfg.save"></button><span class="msg" id="cfg-msg"></span></div>
 </section>
 
 <!-- ================= GitHub ================= -->
 <section id="tab-gist" class="panel">
-  <h2>Gist 自动上传</h2>
-  <label class="lbl">GitHub Token<input type="password" id="cfg-g-token" placeholder="ghp_ 开头经典 Token（留空 = 不修改已保存）" autocomplete="off"></label>
+  <h2 data-i18n="gist.h"></h2>
+  <label class="lbl"><span data-i18n="gist.token"></span><input type="password" id="cfg-g-token" data-i18n-ph="gist.token_ph" autocomplete="off"></label>
   <div class="grid3">
-    <label>Gist ID<input type="text" id="cfg-g-id"></label>
-    <label>目标文件名<input type="text" id="cfg-g-file"></label>
-    <label>GitHub 代理（可选）<input type="text" id="cfg-g-proxy" placeholder="http://127.0.0.1:7890"></label>
+    <label><span data-i18n="gist.id"></span><input type="text" id="cfg-g-id"></label>
+    <label><span data-i18n="gist.file"></span><input type="text" id="cfg-g-file"></label>
+    <label><span data-i18n="gist.proxy"></span><input type="text" id="cfg-g-proxy" data-i18n-ph="gist.proxy_ph"></label>
   </div>
   <div class="btnrow big">
-    <button class="btn-primary" id="btn-save-gist">保存</button>
-    <button class="btn-ghost" id="btn-verify">验证连接</button>
+    <button class="btn-primary" id="btn-save-gist" data-i18n="gist.save"></button>
+    <button class="btn-ghost" id="btn-verify" data-i18n="gist.verify"></button>
     <span class="msg" id="gist-msg"></span>
   </div>
 
   <details class="tutorial">
-    <summary>如何获取 GitHub Token（三步）</summary>
+    <summary data-i18n="tut.title"></summary>
     <ol>
-      <li>登录 GitHub → 右上角头像 → <b>Settings</b></li>
-      <li>底部 <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b></li>
-      <li>Expiration 选长期，<b>仅勾选 gist</b> → Generate → 复制 <b>ghp_</b> 开头 Token 粘贴到上方保存。</li>
+      <li data-i18n="tut.s1"></li>
+      <li data-i18n="tut.s2"></li>
+      <li data-i18n="tut.s3"></li>
     </ol>
-    <p>Gist ID 在 gist 页面地址栏：gist.github.com/用户名/<b>ID</b>。</p>
+    <p data-i18n="tut.gistid"></p>
   </details>
 </section>
 
 <!-- ================= 日志 ================= -->
 <section id="tab-logs" class="panel">
-  <div class="btnrow"><label class="switch-inline"><input type="checkbox" id="log-auto" checked> 自动刷新</label></div>
+  <div class="btnrow"><label class="switch-inline"><input type="checkbox" id="log-auto" checked><span data-i18n="logs.auto"></span></label></div>
   <pre id="logbox" class="logbox"></pre>
 </section>
 </main>
 
-<footer>cf-auto · 引擎 CloudflareSpeedTest (GPL-3.0) · 本项目 MIT</footer>
+<footer data-i18n="footer"></footer>
+
+<!-- Release 通知弹窗 -->
+<div id="rel-scrim" class="modal-scrim hide">
+  <div class="modal-card">
+    <h3 id="rel-title"></h3>
+    <pre id="rel-body" class="release-body"></pre>
+    <div class="btnrow big">
+      <a id="rel-link" class="btn-primary" target="_blank" rel="noopener" data-i18n="rel.goto"></a>
+      <button class="btn-primary" id="rel-install" data-i18n="rel.install"></button>
+      <button class="btn-ghost" id="rel-skip" data-i18n="rel.skip"></button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

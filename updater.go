@@ -18,9 +18,23 @@ import (
 )
 
 type engineInfo struct {
-	Current string `json:"current"`
-	Latest  string `json:"latest"`
-	Path    string `json:"path"`
+	Current    string `json:"current"`
+	Latest     string `json:"latest"`
+	Path       string `json:"path"`
+	LatestBody string `json:"latest_body"`
+	LatestURL  string `json:"latest_url"`
+}
+
+type releaseAsset struct {
+	Name string `json:"name"`
+	URL  string `json:"browser_download_url"`
+}
+
+type appRelease struct {
+	Tag    string         `json:"tag_name"`
+	Body   string         `json:"body"`
+	URL    string         `json:"html_url"`
+	Assets []releaseAsset `json:"assets"`
 }
 
 var versionRe = regexp.MustCompile(`v\d+\.\d+\.\d+`)
@@ -39,7 +53,8 @@ func engineCurrentVersion() string {
 	return "未安装"
 }
 
-func engineLatestVersion(proxyURL string) (string, error) {
+// cfstLatestVersion 查询测速引擎（XIU2/CloudflareSpeedTest）最新版本
+func cfstLatestVersion(proxyURL string) (string, error) {
 	cli, err := ghClient(proxyURL)
 	if err != nil {
 		return "", err
@@ -63,6 +78,106 @@ func engineLatestVersion(proxyURL string) (string, error) {
 	return rel.TagName, nil
 }
 
+// appLatestRelease 查询本程序（openwrt-cf-auto）最新 Release
+func appLatestRelease(proxyURL string) (appRelease, error) {
+	cli, err := ghClient(proxyURL)
+	if err != nil {
+		return appRelease{}, err
+	}
+	req, _ := http.NewRequest("GET", "https://api.github.com/repos/ChEnLeo-7/openwrt-cf-auto/releases/latest", nil)
+	req.Header.Set("User-Agent", "cf-auto")
+	resp, err := cli.Do(req)
+	if err != nil {
+		return appRelease{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return appRelease{}, fmt.Errorf("GitHub Release API HTTP %d", resp.StatusCode)
+	}
+	var rel appRelease
+	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
+		return appRelease{}, err
+	}
+	if rel.Tag == "" {
+		return appRelease{}, fmt.Errorf("未能获取最新版本号")
+	}
+	return rel, nil
+}
+
+func isNewerVersion(current, latest string) bool {
+	current = strings.TrimPrefix(current, "v")
+	latest = strings.TrimPrefix(latest, "v")
+	var c, l [3]int
+	fmt.Sscanf(current, "%d.%d.%d", &c[0], &c[1], &c[2])
+	fmt.Sscanf(latest, "%d.%d.%d", &l[0], &l[1], &l[2])
+	for i := range c {
+		if l[i] != c[i] {
+			return l[i] > c[i]
+		}
+	}
+	return false
+}
+
+func appUpdate(cfg *Config) error {
+	if isWindows() {
+		return fmt.Errorf("Windows 开发环境不支持安装 ipk")
+	}
+	rel, err := appLatestRelease(cfg.Gist.ProxyURL)
+	if err != nil {
+		return err
+	}
+	if !isNewerVersion(Version, rel.Tag) {
+		return nil
+	}
+	arch := "x86_64"
+	if runtime.GOARCH == "arm64" {
+		arch = "aarch64"
+	}
+	want := fmt.Sprintf("cf-auto_%s_%s.ipk", strings.TrimPrefix(rel.Tag, "v"), arch)
+	assetURL := ""
+	for _, a := range rel.Assets {
+		if a.Name == want {
+			assetURL = a.URL
+			break
+		}
+	}
+	if assetURL == "" {
+		return fmt.Errorf("Release 中未找到当前架构安装包 %s", want)
+	}
+	path := filepath.Join(tmpDir(), want)
+	if err := downloadFile(assetURL, path, cfg.Gist.ProxyURL); err != nil {
+		if err2 := downloadFile("https://gh-proxy.org/"+assetURL, path, ""); err2 != nil {
+			return fmt.Errorf("下载更新失败: %v / %v", err, err2)
+		}
+	}
+	command := "nohup sh -c \"sleep 2; opkg install --force-reinstall '" + path + "'\" >/tmp/cf-auto-update.log 2>&1 </dev/null &"
+	cmd := exec.Command("sh", "-c", command)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("启动安装失败: %v", err)
+	}
+	Log.Addf("[程序更新] 已下载 %s，将在 2 秒后安装并重启服务", want)
+	return nil
+}
+
+func appUpdateLoop() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	var last time.Time
+	for range ticker.C {
+		cfg := cur()
+		if !cfg.AppUpdate.AutoInstall || (!last.IsZero() && time.Since(last) < time.Duration(cfg.AppUpdate.CheckHours)*time.Hour) {
+			continue
+		}
+		last = time.Now()
+		rel, err := appLatestRelease(cfg.Gist.ProxyURL)
+		if err == nil && isNewerVersion(Version, rel.Tag) {
+			if err := appUpdate(cfg); err != nil {
+				Log.Addf("[程序更新] 自动更新失败: %v", err)
+			}
+		}
+	}
+}
+
 func cfstAssetName() string {
 	arch := runtime.GOARCH // amd64 / arm64
 	if runtime.GOOS == "windows" {
@@ -78,7 +193,7 @@ func engineUpdate(cfg *Config) error {
 	}
 	cur := cfstPath()
 	Log.Addf("[引擎升级] 当前 %s，查询最新版...", engineCurrentVersion())
-	latest, err := engineLatestVersion(cfg.Gist.ProxyURL)
+	latest, err := cfstLatestVersion(cfg.Gist.ProxyURL)
 	if err != nil {
 		return fmt.Errorf("查询最新版失败: %v", err)
 	}

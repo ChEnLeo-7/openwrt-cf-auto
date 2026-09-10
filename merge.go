@@ -235,7 +235,7 @@ func mergeResults(oldContent string, rows []ResultRow, ledger map[string]int, cf
 	}
 	return b.String(), ResultStats{
 		TestedN: len(rows), Added: added, Kept: kept, Dropped: dropped,
-		Time: time.Now().Format("2006-01-02 15:04:05"),
+		Time:    time.Now().Format("2006-01-02 15:04:05"),
 		Entries: entries,
 	}
 }

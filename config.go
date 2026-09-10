@@ -8,14 +8,20 @@ import (
 )
 
 type RegionCfg struct {
-	Enabled      bool     `json:"enabled"`
-	Colos        []string `json:"colos"`
-	MinPerRegion int      `json:"min_per_region"`
+	Enabled      bool              `json:"enabled"`
+	Colos        []string          `json:"colos"`
+	MinPerRegion int               `json:"min_per_region"`
+	Names        map[string]string `json:"names"`
 }
 
 type ScheduleCfg struct {
 	Enabled       bool `json:"enabled"`
 	IntervalHours int  `json:"interval_hours"`
+}
+
+type AppUpdateCfg struct {
+	AutoInstall bool `json:"auto_install"`
+	CheckHours  int  `json:"check_hours"`
 }
 
 type CfstCfg struct {
@@ -35,19 +41,20 @@ type GistCfg struct {
 }
 
 type Config struct {
-	Listen      string      `json:"listen"`
-	Method      string      `json:"method"`       // latency | bandwidth
-	SourceMode  string      `json:"source_mode"`  // custom | official
-	Sources     []string    `json:"sources"`
-	Ports       []int       `json:"ports"`
-	TopN        int         `json:"top_n"`
-	MaxLines    int         `json:"max_lines"`
-	MissLimit   int         `json:"miss_limit"`
-	Region      RegionCfg   `json:"region"`
-	TagTemplate string      `json:"tag_template"`
-	Schedule    ScheduleCfg `json:"schedule"`
-	Cfst        CfstCfg     `json:"cfst"`
-	Gist        GistCfg     `json:"gist"`
+	Listen      string       `json:"listen"`
+	Method      string       `json:"method"`      // latency | bandwidth
+	SourceMode  string       `json:"source_mode"` // custom | official
+	Sources     []string     `json:"sources"`
+	Ports       []int        `json:"ports"`
+	TopN        int          `json:"top_n"`
+	MaxLines    int          `json:"max_lines"`
+	MissLimit   int          `json:"miss_limit"`
+	Region      RegionCfg    `json:"region"`
+	TagTemplate string       `json:"tag_template"`
+	Schedule    ScheduleCfg  `json:"schedule"`
+	AppUpdate   AppUpdateCfg `json:"app_update"`
+	Cfst        CfstCfg      `json:"cfst"`
+	Gist        GistCfg      `json:"gist"`
 }
 
 func isWindows() bool { return runtime.GOOS == "windows" }
@@ -98,8 +105,9 @@ func defaultConfig() *Config {
 		MissLimit:   3,
 		TagTemplate: "cf-auto | {region} | {latency}ms | {speed}",
 	}
-	c.Region = RegionCfg{Enabled: false, Colos: []string{"SIN"}, MinPerRegion: 3}
+	c.Region = RegionCfg{Enabled: false, Colos: []string{"SIN"}, MinPerRegion: 3, Names: map[string]string{}}
 	c.Schedule = ScheduleCfg{Enabled: true, IntervalHours: 1}
+	c.AppUpdate = AppUpdateCfg{AutoInstall: false, CheckHours: 12}
 	c.Cfst = CfstCfg{TL: 300, TLL: 0, DN: 10, DT: 8, URL: "https://speed.cloudflare.com/__down?bytes=25000000"}
 	c.Gist = GistCfg{Token: "", ID: "", Filename: "CF-Auto-Top.txt", ProxyURL: ""}
 	return c
@@ -147,11 +155,17 @@ func (c *Config) normalize() {
 	if c.Region.MinPerRegion <= 0 {
 		c.Region.MinPerRegion = 3
 	}
+	if c.Region.Names == nil {
+		c.Region.Names = map[string]string{}
+	}
 	if c.TagTemplate == "" {
 		c.TagTemplate = "cf-auto | {region} | {latency}ms | {speed}"
 	}
 	if c.Schedule.IntervalHours <= 0 {
 		c.Schedule.IntervalHours = 1
+	}
+	if c.AppUpdate.CheckHours <= 0 {
+		c.AppUpdate.CheckHours = 12
 	}
 	if c.Cfst.TL <= 0 {
 		c.Cfst.TL = 300

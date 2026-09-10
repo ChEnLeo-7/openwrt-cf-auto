@@ -1,6 +1,8 @@
 # 本地配置与机密（含 GitHub Token，严禁提交）
 config.dev.json
 config.json
+state.json
+state.dev.json
 *.token
 backend.pid
 
@@ -20,3 +22,4 @@ vendor/*.zip
 .vscode/
 .idea/
 Thumbs.db
+*.exe~
