@@ -16,7 +16,7 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const Version = "0.2.0"
+const Version = "0.2.1"
 
 var configPath string
 var cfgPtr atomic.Pointer[Config]
@@ -235,7 +235,6 @@ func main() {
 		Version, configPath, c.Listen, engineCurrentVersion(), cfstPath())
 
 	go scheduleLoop()
-	go appUpdateLoop()
 
 	sub, err := fs.Sub(webFS, "web")
 	if err != nil {

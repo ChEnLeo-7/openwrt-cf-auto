@@ -142,8 +142,11 @@
 
   <h2 data-i18n="cfg.appupdate_h"></h2>
   <div class="card switch-row slim">
-    <span data-i18n="eng.autoupdate"></span>
-    <label class="inline-number"><span data-i18n="eng.checkhours"></span><input type="number" id="cfg-update-hours" min="1" max="168"></label>
+    <div class="upd-left">
+      <span data-i18n="eng.autoupdate"></span>
+      <small data-i18n="eng.autoupdate_hint"></small>
+    </div>
+    <span class="grow"></span>
     <button class="btn-ghost" id="btn-app-check" data-i18n="app.check"></button>
     <span class="switch"><input type="checkbox" id="cfg-autoupdate"><i></i></span>
   </div>

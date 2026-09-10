@@ -159,25 +159,6 @@ func appUpdate(cfg *Config) error {
 	return nil
 }
 
-func appUpdateLoop() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	var last time.Time
-	for range ticker.C {
-		cfg := cur()
-		if !cfg.AppUpdate.AutoInstall || (!last.IsZero() && time.Since(last) < time.Duration(cfg.AppUpdate.CheckHours)*time.Hour) {
-			continue
-		}
-		last = time.Now()
-		rel, err := appLatestRelease(cfg.Gist.ProxyURL)
-		if err == nil && isNewerVersion(Version, rel.Tag) {
-			if err := appUpdate(cfg); err != nil {
-				Log.Addf("[程序更新] 自动更新失败: %v", err)
-			}
-		}
-	}
-}
-
 func cfstAssetName() string {
 	arch := runtime.GOARCH // amd64 / arm64
 	if runtime.GOOS == "windows" {

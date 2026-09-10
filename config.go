@@ -21,7 +21,6 @@ type ScheduleCfg struct {
 
 type AppUpdateCfg struct {
 	AutoInstall bool `json:"auto_install"`
-	CheckHours  int  `json:"check_hours"`
 }
 
 type CfstCfg struct {
@@ -107,7 +106,7 @@ func defaultConfig() *Config {
 	}
 	c.Region = RegionCfg{Enabled: false, Colos: []string{"SIN"}, MinPerRegion: 3, Names: map[string]string{}}
 	c.Schedule = ScheduleCfg{Enabled: true, IntervalHours: 1}
-	c.AppUpdate = AppUpdateCfg{AutoInstall: false, CheckHours: 12}
+	c.AppUpdate = AppUpdateCfg{AutoInstall: false}
 	c.Cfst = CfstCfg{TL: 300, TLL: 0, DN: 10, DT: 8, URL: "https://speed.cloudflare.com/__down?bytes=25000000"}
 	c.Gist = GistCfg{Token: "", ID: "", Filename: "CF-Auto-Top.txt", ProxyURL: ""}
 	return c
@@ -163,9 +162,6 @@ func (c *Config) normalize() {
 	}
 	if c.Schedule.IntervalHours <= 0 {
 		c.Schedule.IntervalHours = 1
-	}
-	if c.AppUpdate.CheckHours <= 0 {
-		c.AppUpdate.CheckHours = 12
 	}
 	if c.Cfst.TL <= 0 {
 		c.Cfst.TL = 300

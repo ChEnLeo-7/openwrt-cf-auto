@@ -12,7 +12,7 @@ const I18N = {
     "dash.run":"开始优选","dash.reupload":"重传结果","dash.results":"最近优选结果","dash.empty":"尚无结果 — 点击「开始优选」运行一轮。","dash.engine_h":"引擎升级",
     "card.version":"程序版本","card.engine":"测速引擎","card.schedule":"定时更新","card.gist":"Gist",
     "tbl.idx":"#","tbl.node":"节点","tbl.region":"地区","tbl.latency":"延迟","tbl.bandwidth":"带宽",
-    "eng.current":"当前","eng.latest":"最新","eng.check":"检查更新","eng.update":"升级引擎","eng.autoupdate":"自动安装程序更新","eng.checkhours":"每隔（小时）","app.check":"检查程序更新",
+    "eng.current":"当前","eng.latest":"最新","eng.check":"检查更新","eng.update":"升级引擎","eng.autoupdate":"自动安装程序更新","eng.autoupdate_hint":"打开面板时自动检测一次，发现新版本弹出双语说明","app.check":"检查程序更新",
     "cfg.method_h":"优选方式","method.latency":"按延迟优选","method.bandwidth":"按带宽优选",
     "method.hint.latency":"对候选 IP 做 TCP 延迟测试，速度最快、几乎零流量。","method.hint.bandwidth":"对延迟达标的候选逐个下载测速，按带宽排序（会产生测速流量）。",
     "cfg.source_h":"优选来源","source.custom":"自定义优选源","source.official":"CF 官方网段","source.ph":"每行一个优选 URL","source.hint":"拉取各来源后合并去重，再从你的线路进行二次优选。","source.official_note":"实时获取 Cloudflare 官方 IPv4 网段，与 CloudflareSpeedTest 默认方式一致。覆盖最全，但单轮耗时更长。",
@@ -20,20 +20,20 @@ const I18N = {
     "cfg.ports_h":"测速端口","cfg.port_ph":"自定义端口","cfg.policy_h":"结果策略","cfg.topn":"本轮 TopN","cfg.maxlines":"结果行数上限","cfg.miss":"连续落榜淘汰轮数",
     "cfg.tag_h":"节点信息模板","cfg.tag_sub":"# 后显示内容","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"变量：{region} 地区代码 · {latency} 延迟 · {speed} 带宽（自带 MB/s）· {date} 日期。空段自动省略。",
     "cfg.params_h":"CloudflareSpeedTest 参数","cfg.tl":"平均延迟上限 -tl (ms)","cfg.tll":"平均延迟下限 -tll (ms)","cfg.dn":"下载测速数量 -dn","cfg.dt":"单 IP 测速时长 -dt (秒)","cfg.url":"下载测速地址","cfg.extra":"高级附加参数","cfg.extra_ph":"原样追加，如 -t 200",
-    "cfg.sched_h":"定时更新","cfg.sched_en":"自动优选并更新 Gist","cfg.sched_int":"更新间隔（小时）","cfg.sched_hint":"到点按当前优选方式、来源、地区和端口执行完整一轮。","cfg.appupdate_h":"程序更新","cfg.appupdate_hint":"发现新版本时展示双语 Release 说明；启用后自动下载匹配架构的 ipk 并安装。","cfg.save":"保存设置",
+    "cfg.sched_h":"定时更新","cfg.sched_en":"自动优选并更新 Gist","cfg.sched_int":"更新间隔（小时）","cfg.sched_hint":"到点按当前优选方式、来源、地区和端口执行完整一轮。","cfg.appupdate_h":"程序更新","cfg.appupdate_hint":"打开面板时自动检测一次更新，发现新版本会弹出双语 Release 说明。","cfg.save":"保存设置",
     "gist.h":"Gist 自动上传","gist.token":"GitHub Token","gist.token_ph":"ghp_ 开头经典 Token（留空表示不修改）","gist.token_saved_ph":"已保存（留空 = 不修改）","gist.id":"Gist ID","gist.file":"目标文件名","gist.proxy":"GitHub 代理（可选）","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"保存","gist.verify":"验证连接",
     "tut.title":"如何获取 GitHub Token（三步）","tut.s1":"登录 GitHub → 头像 → Settings。","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)。","tut.s3":"选择有效期，只勾选 gist，生成后复制 ghp_ 开头的 Token。","tut.gistid":"Gist ID 位于 gist 页面 URL：gist.github.com/用户名/ID。",
     "logs.auto":"自动刷新","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
     "status.configured":"已配置","status.unconfigured":"未配置","status.running":"运行中","status.idle":"空闲","status.closed":"已关闭","status.every":"每 {h} 小时","status.last":"上次","status.next":"下次","status.never":"从未（启动后自动首跑）","status.backend_fail":"后端连接失败",
     "msg.saved":"已保存 ✓","msg.save_fail":"保存失败：","msg.checking":"检查中…","msg.latest":"已是最新版 ✓","msg.engine_upgrade":"可升级：{a} → {b}","msg.reupload_ok":"重传成功","msg.reupload_fail":"重传失败：","msg.run_fail":"触发失败：","msg.engine_confirm":"确认下载并替换测速引擎？失败会自动回滚。","msg.upgrading":"升级中…","msg.upgraded":"已升级到 {v} ✓",
-    "theme.title":"切换浅色 / 深色","rel.title":"发现新版本 {v}","rel.goto":"查看 Release","rel.install":"立即更新","rel.skip":"忽略此版本","rel.none":"当前已是最新版本","rel.check_fail":"程序更新检查失败：","rel.installing":"正在下载并安装，服务将自动重启…"
+    "theme.title":"切换浅色 / 深色","rel.title":"发现新版本 {v}","rel.goto":"查看 Release","rel.install":"立即更新","rel.skip":"忽略此版本","rel.none":"当前已是最新版本","rel.check_fail":"程序更新检查失败：","rel.installing":"正在下载并安装，服务将自动重启…","rel.autostarted":"已自动开始更新，服务将在几秒后重启"
   },
   en: {
     "tab.dash":"Overview","tab.cfg":"Optimization","tab.gist":"GitHub","tab.logs":"Logs",
     "dash.run":"Start optimization","dash.reupload":"Re-upload","dash.results":"Latest results","dash.empty":"No results yet — click “Start optimization” to run once.","dash.engine_h":"Engine update",
     "card.version":"App version","card.engine":"Test engine","card.schedule":"Scheduled update","card.gist":"Gist",
     "tbl.idx":"#","tbl.node":"Endpoint","tbl.region":"Region","tbl.latency":"Latency","tbl.bandwidth":"Bandwidth",
-    "eng.current":"Current","eng.latest":"Latest","eng.check":"Check","eng.update":"Update engine","eng.autoupdate":"Automatically install app updates","eng.checkhours":"Every (hours)","app.check":"Check app update",
+    "eng.current":"Current","eng.latest":"Latest","eng.check":"Check","eng.update":"Update engine","eng.autoupdate":"Auto-install app updates","eng.autoupdate_hint":"Checks once when the panel opens; shows a dialog if a new version is found.","app.check":"Check app update",
     "cfg.method_h":"Optimization method","method.latency":"Optimize for latency","method.bandwidth":"Optimize for bandwidth",
     "method.hint.latency":"Runs TCP latency tests against candidate IPs. Fast and nearly traffic-free.","method.hint.bandwidth":"Downloads a test file through qualified candidates and ranks them by throughput.",
     "cfg.source_h":"Candidate source","source.custom":"Custom preferred-IP URLs","source.official":"Official CF ranges","source.ph":"One preferred-IP URL per line","source.hint":"Fetch, merge, and deduplicate public candidates, then re-test them from your own network.","source.official_note":"Fetches current Cloudflare IPv4 ranges, matching CloudflareSpeedTest's default workflow. Complete but slower.",
@@ -41,13 +41,13 @@ const I18N = {
     "cfg.ports_h":"Test ports","cfg.port_ph":"Custom port","cfg.policy_h":"Result policy","cfg.topn":"Top N this run","cfg.maxlines":"Maximum result lines","cfg.miss":"Misses before eviction",
     "cfg.tag_h":"Node label template","cfg.tag_sub":"text after #","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"Variables: {region}, {latency}, {speed} (includes MB/s), and {date}. Empty segments are removed.",
     "cfg.params_h":"CloudflareSpeedTest parameters","cfg.tl":"Maximum average latency -tl (ms)","cfg.tll":"Minimum average latency -tll (ms)","cfg.dn":"Download test count -dn","cfg.dt":"Test duration per IP -dt (seconds)","cfg.url":"Download test URL","cfg.extra":"Advanced extra arguments","cfg.extra_ph":"Passed through as-is, e.g. -t 200",
-    "cfg.sched_h":"Scheduled update","cfg.sched_en":"Automatically optimize and update Gist","cfg.sched_int":"Update interval (hours)","cfg.sched_hint":"Runs a full optimization using the current method, source, regions, and ports.","cfg.appupdate_h":"Application updates","cfg.appupdate_hint":"Shows bilingual Release notes when an update is found; when enabled, downloads and installs the matching IPK automatically.","cfg.save":"Save settings",
+    "cfg.sched_h":"Scheduled update","cfg.sched_en":"Automatically optimize and update Gist","cfg.sched_int":"Update interval (hours)","cfg.sched_hint":"Runs a full optimization using the current method, source, regions, and ports.","cfg.appupdate_h":"Application updates","cfg.appupdate_hint":"Checks for updates automatically each time the panel opens; a bilingual notes dialog appears when a new version is found.","cfg.save":"Save settings",
     "gist.h":"Automatic Gist upload","gist.token":"GitHub token","gist.token_ph":"Classic ghp_ token (leave blank to keep current)","gist.token_saved_ph":"Saved (leave blank to keep it)","gist.id":"Gist ID","gist.file":"Target filename","gist.proxy":"GitHub proxy (optional)","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"Save","gist.verify":"Verify connection",
     "tut.title":"Get a GitHub token in three steps","tut.s1":"Sign in to GitHub → avatar → Settings.","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic).","tut.s3":"Choose an expiration, select only gist, generate it, and copy the ghp_ token.","tut.gistid":"The Gist ID is in the URL: gist.github.com/username/ID.",
     "logs.auto":"Auto refresh","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
     "status.configured":"Configured","status.unconfigured":"Not configured","status.running":"Running","status.idle":"Idle","status.closed":"Disabled","status.every":"Every {h} hours","status.last":"Last","status.next":"Next","status.never":"Never (first run starts automatically)","status.backend_fail":"Backend unavailable",
     "msg.saved":"Saved ✓","msg.save_fail":"Save failed: ","msg.checking":"Checking…","msg.latest":"Already up to date ✓","msg.engine_upgrade":"Update available: {a} → {b}","msg.reupload_ok":"Re-upload complete","msg.reupload_fail":"Re-upload failed: ","msg.run_fail":"Failed to start: ","msg.engine_confirm":"Download and replace the test engine? Failures automatically roll back.","msg.upgrading":"Updating…","msg.upgraded":"Updated to {v} ✓",
-    "theme.title":"Switch light / dark","rel.title":"New version {v} available","rel.goto":"View Release","rel.install":"Update now","rel.skip":"Ignore this version","rel.none":"You are up to date","rel.check_fail":"App update check failed: ","rel.installing":"Downloading and installing; the service will restart automatically…"
+    "theme.title":"Switch light / dark","rel.title":"New version {v} available","rel.goto":"View Release","rel.install":"Update now","rel.skip":"Ignore this version","rel.none":"You are up to date","rel.check_fail":"App update check failed: ","rel.installing":"Downloading and installing; the service will restart automatically…","rel.autostarted":"Auto-update started; the service will restart shortly"
   }
 };
 
@@ -374,7 +374,6 @@ function fillConfig(c) {
   $("cfg-sched-en").checked = c.schedule.enabled;
   $("cfg-sched-int").value = c.schedule.interval_hours;
   $("cfg-autoupdate").checked = !!(c.app_update && c.app_update.auto_install);
-  $("cfg-update-hours").value = (c.app_update && c.app_update.check_hours) || 12;
   $("cfg-cf-tl").value = c.cfst.tl;
   $("cfg-cf-tll").value = c.cfst.tll;
   $("cfg-cf-dn").value = c.cfst.dn;
@@ -405,7 +404,7 @@ function collectCfg() {
     miss_limit: +$("cfg-miss").value,
     tag_template: $("cfg-tag").value.trim(),
     schedule: { enabled: $("cfg-sched-en").checked, interval_hours: +$("cfg-sched-int").value },
-    app_update: { auto_install: $("cfg-autoupdate").checked, check_hours: +$("cfg-update-hours").value },
+    app_update: { auto_install: $("cfg-autoupdate").checked },
     cfst: {
       tl: +$("cfg-cf-tl").value, tll: +$("cfg-cf-tll").value,
       dn: +$("cfg-cf-dn").value, dt: +$("cfg-cf-dt").value,
@@ -508,20 +507,29 @@ function isNewer(current, latest) {
   return false;
 }
 function closeRelease() { $("rel-scrim").classList.add("hide"); }
-function showRelease(rel) {
+function showRelease(rel, installing) {
   releaseTag = rel.tag;
   $("rel-title").textContent = fmt("rel.title", {v: rel.tag});
-  $("rel-body").textContent = rel.body || rel.tag;
+  $("rel-body").textContent = (rel.body || rel.tag) + (installing ? "\n\n" + t("rel.autostarted") : "");
   $("rel-link").href = rel.url || "https://github.com/ChEnLeo-7/openwrt-cf-auto/releases";
+  $("rel-install").style.display = installing ? "none" : "";
   $("rel-scrim").classList.remove("hide");
 }
 async function checkAppRelease(silent=false) {
   try {
-    const [rel, st] = await Promise.all([api("/api/apprelease"), api("/api/status")]);
-    if (rel.update_available || isNewer(st.version, rel.tag)) {
-      if (!silent || localStorage.getItem("cf-skip-version") !== rel.tag) showRelease(rel);
-    } else if (!silent) {
-      alert(t("rel.none"));
+    const [rel, st, cfg] = await Promise.all([api("/api/apprelease"), api("/api/status"), api("/api/config")]);
+    const available = rel.update_available || isNewer(st.version, rel.tag);
+    if (!available) {
+      if (!silent) alert(t("rel.none"));
+      return;
+    }
+    if (silent && localStorage.getItem("cf-skip-version") === rel.tag) return;
+    const autoOn = cfg.app_update && cfg.app_update.auto_install;
+    if (autoOn && silent) {
+      try { await api("/api/appupdate", {method:"POST"}); } catch (e) { /* 安装失败时仍展示说明 */ }
+      showRelease(rel, true);
+    } else {
+      showRelease(rel, false);
     }
   } catch (e) {
     if (!silent) alert(t("rel.check_fail") + e.message);
@@ -534,7 +542,7 @@ $("rel-install").onclick = async () => {
   $("rel-install").disabled = true;
   try {
     await api("/api/appupdate", {method:"POST"});
-    $("rel-body").textContent = t("rel.installing");
+    $("rel-body").textContent += "\n\n" + t("rel.autostarted");
     setTimeout(closeRelease, 2500);
   } catch (e) {
     $("rel-install").disabled = false;
