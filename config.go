@@ -7,12 +7,15 @@ import (
 	"runtime"
 )
 
-type TierCfg struct {
-	Enabled       bool   `json:"enabled"`
-	IntervalHours int    `json:"interval_hours"`
-	Time          string `json:"time"`
-	Colos         string `json:"colos"`
-	Filename      string `json:"filename"`
+type RegionCfg struct {
+	Enabled      bool     `json:"enabled"`
+	Colos        []string `json:"colos"`
+	MinPerRegion int      `json:"min_per_region"`
+}
+
+type ScheduleCfg struct {
+	Enabled       bool `json:"enabled"`
+	IntervalHours int  `json:"interval_hours"`
 }
 
 type CfstCfg struct {
@@ -32,19 +35,19 @@ type GistCfg struct {
 }
 
 type Config struct {
-	Listen    string   `json:"listen"`
-	Sources   []string `json:"sources"`
-	Ports     []int    `json:"ports"`
-	TopN      int      `json:"top_n"`
-	MaxLines  int      `json:"max_lines"`
-	MissLimit int      `json:"miss_limit"`
-	Tiers     struct {
-		Hourly TierCfg `json:"hourly"`
-		Deep   TierCfg `json:"deep"`
-		Region TierCfg `json:"region"`
-	} `json:"tiers"`
-	Cfst CfstCfg `json:"cfst"`
-	Gist GistCfg `json:"gist"`
+	Listen      string      `json:"listen"`
+	Method      string      `json:"method"`       // latency | bandwidth
+	SourceMode  string      `json:"source_mode"`  // custom | official
+	Sources     []string    `json:"sources"`
+	Ports       []int       `json:"ports"`
+	TopN        int         `json:"top_n"`
+	MaxLines    int         `json:"max_lines"`
+	MissLimit   int         `json:"miss_limit"`
+	Region      RegionCfg   `json:"region"`
+	TagTemplate string      `json:"tag_template"`
+	Schedule    ScheduleCfg `json:"schedule"`
+	Cfst        CfstCfg     `json:"cfst"`
+	Gist        GistCfg     `json:"gist"`
 }
 
 func isWindows() bool { return runtime.GOOS == "windows" }
@@ -62,6 +65,8 @@ func dataDir() string {
 	}
 	return "/etc/cf-auto"
 }
+
+func statePath() string { return filepath.Join(dataDir(), "state.json") }
 
 func tmpDir() string {
 	if isWindows() {
@@ -83,23 +88,19 @@ func cfstPath() string {
 
 func defaultConfig() *Config {
 	c := &Config{
-		Listen:    ":7800",
-		Sources:   []string{},
-		Ports:     []int{443},
-		TopN:      10,
-		MaxLines:  25,
-		MissLimit: 3,
+		Listen:      ":7800",
+		Method:      "latency",
+		SourceMode:  "custom",
+		Sources:     []string{},
+		Ports:       []int{443},
+		TopN:        10,
+		MaxLines:    25,
+		MissLimit:   3,
+		TagTemplate: "cf-auto | {region} | {latency}ms | {speed}",
 	}
-	c.Cfst = CfstCfg{
-		TL:  300,
-		TLL: 0,
-		DN:  10,
-		DT:  8,
-		URL: "https://speed.cloudflare.com/__down?bytes=25000000",
-	}
-	c.Tiers.Hourly = TierCfg{Enabled: true, IntervalHours: 1, Filename: ""}
-	c.Tiers.Deep = TierCfg{Enabled: false, Time: "03:30", Filename: ""}
-	c.Tiers.Region = TierCfg{Enabled: false, IntervalHours: 3, Colos: "SIN,NRT,KIX", Filename: ""}
+	c.Region = RegionCfg{Enabled: false, Colos: []string{"SIN"}, MinPerRegion: 3}
+	c.Schedule = ScheduleCfg{Enabled: true, IntervalHours: 1}
+	c.Cfst = CfstCfg{TL: 300, TLL: 0, DN: 10, DT: 8, URL: "https://speed.cloudflare.com/__down?bytes=25000000"}
 	c.Gist = GistCfg{Token: "", ID: "", Filename: "CF-Auto-Top.txt", ProxyURL: ""}
 	return c
 }
@@ -125,6 +126,12 @@ func (c *Config) normalize() {
 	if c.Listen == "" {
 		c.Listen = ":7800"
 	}
+	if c.Method != "bandwidth" {
+		c.Method = "latency"
+	}
+	if c.SourceMode != "official" {
+		c.SourceMode = "custom"
+	}
 	if len(c.Ports) == 0 {
 		c.Ports = []int{443}
 	}
@@ -136,6 +143,15 @@ func (c *Config) normalize() {
 	}
 	if c.MissLimit <= 0 {
 		c.MissLimit = 3
+	}
+	if c.Region.MinPerRegion <= 0 {
+		c.Region.MinPerRegion = 3
+	}
+	if c.TagTemplate == "" {
+		c.TagTemplate = "cf-auto | {region} | {latency}ms | {speed}"
+	}
+	if c.Schedule.IntervalHours <= 0 {
+		c.Schedule.IntervalHours = 1
 	}
 	if c.Cfst.TL <= 0 {
 		c.Cfst.TL = 300
@@ -155,23 +171,6 @@ func (c *Config) normalize() {
 	if c.Gist.Filename == "" {
 		c.Gist.Filename = "CF-Auto-Top.txt"
 	}
-	if c.Tiers.Hourly.IntervalHours <= 0 {
-		c.Tiers.Hourly.IntervalHours = 1
-	}
-	if c.Tiers.Region.IntervalHours <= 0 {
-		c.Tiers.Region.IntervalHours = 3
-	}
-	if c.Tiers.Deep.Time == "" {
-		c.Tiers.Deep.Time = "03:30"
-	}
-}
-
-func (c *Config) tierFilename(tier string) string {
-	fn := c.Gist.Filename
-	if t, ok := map[string]TierCfg{"hourly": c.Tiers.Hourly, "deep": c.Tiers.Deep, "region": c.Tiers.Region}[tier]; ok && t.Filename != "" {
-		fn = t.Filename
-	}
-	return fn
 }
 
 func SaveConfig(path string, c *Config) error {

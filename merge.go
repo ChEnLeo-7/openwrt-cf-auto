@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,36 +14,60 @@ type ResultRow struct {
 	Port    int
 	Latency float64
 	Speed   float64
+	Region  string
 }
 
 func (r ResultRow) EP() string {
 	return r.IP + ":" + strconv.Itoa(r.Port)
 }
 
-type entryMeta struct {
-	Tag  string
-	Miss int
+type EntryMeta struct {
+	EP      string  `json:"ep"`
+	Region  string  `json:"region"`
+	Latency float64 `json:"latency"`
+	Speed   float64 `json:"speed"`
+	Tag     string  `json:"tag"`
 }
 
-func rowTag(r ResultRow, tier, colos string) string {
-	parts := []string{"cf-auto"}
-	if tier == "region" && colos != "" {
-		parts = append(parts, colos)
-	}
-	parts = append(parts, fmt.Sprintf("%.0fms", r.Latency))
-	if r.Speed > 0 {
-		parts = append(parts, fmt.Sprintf("%.1fMbps", r.Speed))
-	}
-	return strings.Join(parts, " | ")
+type ResultStats struct {
+	TestedN int         `json:"tested_n"`
+	Added   int         `json:"added"`
+	Kept    int         `json:"kept"`
+	Dropped int         `json:"dropped"`
+	Time    string      `json:"time"`
+	Content string      `json:"content"`
+	Entries []EntryMeta `json:"entries"`
 }
 
-func parseExisting(content string) (order []string, tags map[string]string, ledger map[string]int) {
+type appState struct {
+	Ledgers map[string]map[string]int `json:"ledgers"`
+}
+
+func loadState() *appState {
+	st := &appState{Ledgers: map[string]map[string]int{}}
+	b, err := os.ReadFile(statePath())
+	if err == nil {
+		_ = json.Unmarshal(b, st)
+	}
+	if st.Ledgers == nil {
+		st.Ledgers = map[string]map[string]int{}
+	}
+	return st
+}
+
+func saveState(st *appState) {
+	b, _ := json.MarshalIndent(st, "", " ")
+	_ = os.MkdirAll(dataDir(), 0755)
+	_ = os.WriteFile(statePath(), b, 0600)
+}
+
+// parseExisting 提取旧结果文件中的上榜条目；兼容旧版内嵌账本（迁移用）
+func parseExisting(content string) (order []string, tags map[string]string, legacyLedger map[string]int) {
 	tags = map[string]string{}
-	ledger = map[string]int{}
+	legacyLedger = map[string]int{}
 	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimRight(line, "\r")
-		line = strings.TrimSpace(line)
-		if line == "" || !strings.HasPrefix(line, "#") && !strings.Contains(line, "#") {
+		line = strings.TrimSpace(strings.TrimRight(line, "\r"))
+		if line == "" {
 			continue
 		}
 		if strings.HasPrefix(line, "# ledger:") {
@@ -55,7 +80,7 @@ func parseExisting(content string) (order []string, tags map[string]string, ledg
 				p := strings.SplitN(kv, "=", 2)
 				if len(p) == 2 {
 					n, _ := strconv.Atoi(p[1])
-					ledger[p[0]] = n
+					legacyLedger[p[0]] = n
 				}
 			}
 			continue
@@ -74,120 +99,143 @@ func parseExisting(content string) (order []string, tags map[string]string, ledg
 		order = append(order, ep)
 		tags[ep] = strings.TrimSpace(line[idx+1:])
 	}
-	return order, tags, ledger
+	return order, tags, legacyLedger
 }
 
-// mergeResults merges this round's passing rows into the existing gist file
-// content with decay-based eviction. Returns new file content and stats.
-func mergeResults(oldContent string, rows []ResultRow, tier string, cfg *Config) (string, map[string]int, int, int, int) {
-	colos := ""
-	if tier == "region" {
-		colos = cfg.Tiers.Region.Colos
+// renderTag 按用户模板渲染节点 # 后信息；空片段自动省略
+func renderTag(r ResultRow, template string) string {
+	spd := ""
+	if r.Speed > 0 {
+		spd = strconv.FormatFloat(r.Speed, 'f', 1, 64) + "MB/s"
 	}
-
-	passing := make([]ResultRow, 0, len(rows))
-	passingIP := map[string]bool{}
-	passingEP := map[string]bool{}
-	for _, r := range rows {
-		if r.Latency <= 0 {
-			continue
+	out := strings.ReplaceAll(template, "{region}", r.Region)
+	out = strings.ReplaceAll(out, "{latency}", strconv.FormatFloat(r.Latency, 'f', 0, 64))
+	out = strings.ReplaceAll(out, "{speed}", spd)
+	out = strings.ReplaceAll(out, "{date}", time.Now().Format("01-02"))
+	var parts []string
+	for _, seg := range strings.Split(out, "|") {
+		seg = strings.TrimSpace(seg)
+		if seg != "" {
+			parts = append(parts, seg)
 		}
-		passing = append(passing, r)
-		passingIP[r.IP] = true
-		passingEP[r.EP()] = true
 	}
-	if tier == "deep" {
-		sort.Slice(passing, func(i, j int) bool {
-			if passing[i].Speed != passing[j].Speed {
-				return passing[i].Speed > passing[j].Speed
+	if len(parts) == 0 {
+		return "cf-auto"
+	}
+	return strings.Join(parts, " | ")
+}
+
+// mergeResults 合并本轮结果与历史榜；注释头只保留版本与更新日期
+func mergeResults(oldContent string, rows []ResultRow, ledger map[string]int, cfg *Config) (string, ResultStats) {
+	less := func(a, b ResultRow) bool {
+		if cfg.Method == "bandwidth" {
+			if a.Speed != b.Speed {
+				return a.Speed > b.Speed
 			}
-			return passing[i].Latency < passing[j].Latency
-		})
-	} else {
-		sort.Slice(passing, func(i, j int) bool {
-			return passing[i].Latency < passing[j].Latency
-		})
+			return a.Latency < b.Latency
+		}
+		return a.Latency < b.Latency
+	}
+	passing := make([]ResultRow, 0, len(rows))
+	for _, r := range rows {
+		if r.Latency > 0 {
+			passing = append(passing, r)
+		}
+	}
+	sort.Slice(passing, func(i, j int) bool { return less(passing[i], passing[j]) })
+
+	selected := make([]ResultRow, 0, cfg.TopN)
+	selectedEP := map[string]bool{}
+	for _, r := range passing {
+		if len(selected) >= cfg.TopN {
+			break
+		}
+		if !selectedEP[r.EP()] {
+			selected = append(selected, r)
+			selectedEP[r.EP()] = true
+		}
 	}
 
-	order, tags, ledger := parseExisting(oldContent)
-	if ledger == nil {
-		ledger = map[string]int{}
+	// 区域保护：每个选中地区至少保留 MinPerRegion 个
+	if cfg.Region.Enabled && len(cfg.Region.Colos) > 0 {
+		for _, colo := range cfg.Region.Colos {
+			count := 0
+			for _, r := range selected {
+				if r.Region == colo {
+					count++
+				}
+			}
+			if count >= cfg.Region.MinPerRegion {
+				continue
+			}
+			for _, r := range passing {
+				if count >= cfg.Region.MinPerRegion {
+					break
+				}
+				if r.Region != colo || selectedEP[r.EP()] {
+					continue
+				}
+				selected = append(selected, r)
+				selectedEP[r.EP()] = true
+				count++
+			}
+		}
 	}
 
-	newTopCount := cfg.TopN
-	if newTopCount > len(passing) {
-		newTopCount = len(passing)
+	oldOrder, oldTags, legacy := parseExisting(oldContent)
+	if len(ledger) == 0 && len(legacy) > 0 {
+		ledger = legacy // 兼容旧版内嵌账本迁移
 	}
-	newTop := passing[:newTopCount]
-	rest := passing[newTopCount:]
-
+	rowsByEP := map[string]ResultRow{}
+	for _, r := range passing {
+		rowsByEP[r.EP()] = r
+	}
+	keptEP := map[string]bool{}
 	merged := make([]string, 0, cfg.MaxLines+8)
-	seen := map[string]bool{}
 	added, kept := 0, 0
-
-	for _, r := range newTop {
+	for _, r := range selected {
 		merged = append(merged, r.EP())
-		seen[r.EP()] = true
-		tags[r.EP()] = rowTag(r, tier, colos)
+		keptEP[r.EP()] = true
+		oldTags[r.EP()] = renderTag(r, cfg.TagTemplate)
 		ledger[r.EP()] = 0
 		added++
 	}
-	// 仍达标的旧上榜 IP：出现在本轮通过集合里（按 IP 匹配，端口以旧上榜为准）
-	for _, ep := range order {
-		if seen[ep] {
-			continue
-		}
-		ip := ep[:strings.Index(ep, ":")]
-		if passingIP[ip] {
-			if _, ok := passingEP[ep]; ok {
-				for _, r := range rest {
-					if r.EP() == ep {
-						tags[ep] = rowTag(r, tier, colos)
-						break
-					}
-				}
-			}
-			merged = append(merged, ep)
-			seen[ep] = true
-			ledger[ep] = 0
-			kept++
-		}
-	}
-	// 未上榜但历史在册的：落榜计数，超限淘汰
 	dropped := 0
-	for _, ep := range order {
-		if seen[ep] {
+	for _, ep := range oldOrder {
+		if keptEP[ep] {
 			continue
 		}
 		m := ledger[ep] + 1
 		if m >= cfg.MissLimit {
 			delete(ledger, ep)
-			delete(tags, ep)
+			delete(oldTags, ep)
 			dropped++
 			continue
 		}
 		ledger[ep] = m
 		merged = append(merged, ep)
-		seen[ep] = true
+		keptEP[ep] = true
 		kept++
 	}
-
 	if len(merged) > cfg.MaxLines {
 		merged = merged[:cfg.MaxLines]
 	}
 
 	var b strings.Builder
-	b.WriteString("# cf-auto result v1\n")
-	b.WriteString("# updated: " + time.Now().Format("2006-01-02 15:04:05") + " tier=" + tier + "\n")
-	b.WriteString(fmt.Sprintf("# stats: total=%d added=%d kept=%d dropped=%d limit=%d\n", len(merged), added, kept, dropped, cfg.MaxLines))
-	kvs := make([]string, 0, len(ledger))
-	for ep, m := range ledger {
-		kvs = append(kvs, ep+"="+strconv.Itoa(m))
-	}
-	sort.Strings(kvs)
-	b.WriteString("# ledger: " + strings.Join(kvs, ";") + "\n")
+	b.WriteString("# cf-auto v" + Version + "\n")
+	b.WriteString("# updated: " + time.Now().Format("2006-01-02 15:04:05") + "\n")
+	var entries []EntryMeta
 	for _, ep := range merged {
-		b.WriteString(ep + "#" + tags[ep] + "\n")
+		b.WriteString(ep + "#" + oldTags[ep] + "\n")
+		em := EntryMeta{EP: ep, Tag: oldTags[ep]}
+		if r, ok := rowsByEP[ep]; ok {
+			em.Region, em.Latency, em.Speed = r.Region, r.Latency, r.Speed
+		}
+		entries = append(entries, em)
 	}
-	return b.String(), ledger, added, kept, dropped
+	return b.String(), ResultStats{
+		TestedN: len(rows), Added: added, Kept: kept, Dropped: dropped,
+		Time: time.Now().Format("2006-01-02 15:04:05"),
+		Entries: entries,
+	}
 }

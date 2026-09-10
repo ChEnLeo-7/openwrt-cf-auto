@@ -1,198 +1,107 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
 
-type TierResult struct {
-	Time     string `json:"time"`
-	Content  string `json:"content"`
-	TestedN  int    `json:"tested_n"`
-	Added    int    `json:"added"`
-	Kept     int    `json:"kept"`
-	Dropped  int    `json:"dropped"`
-	Filename string `json:"filename"`
+type ScheduleStatus struct {
+	Enabled       bool   `json:"enabled"`
+	IntervalHours int    `json:"interval_hours"`
+	Running       bool   `json:"running"`
+	LastRun       string `json:"last_run"`
+	NextRun       string `json:"next_run"`
+	LastOK        bool   `json:"last_ok"`
 }
 
 var (
-	lastResultMu sync.RWMutex
-	lastResult   = map[string]TierResult{}
-
-	schedMu        sync.Mutex
-	lastRun        = map[string]time.Time{}
-	running        = map[string]bool{}
-	deepMarkerFile string
+	resultMu    sync.RWMutex
+	lastRunAt   time.Time
+	lastOK      bool
+	running     bool
+	lastResult  ResultStats
 )
 
-type TierStatus struct {
-	Name    string `json:"name"`
-	Enabled bool   `json:"enabled"`
-	Running bool   `json:"running"`
-	LastRun string `json:"last_run"`
-	NextRun string `json:"next_run"`
-	LastOK  bool   `json:"last_ok"`
-}
-
-func deepDue(cfg *Config) bool {
-	t, err := time.Parse("15:04", cfg.Tiers.Deep.Time)
-	if err != nil {
-		return false
+func tryRun() (bool, error) {
+	schedMu2.Lock()
+	if running {
+		schedMu2.Unlock()
+		return false, errRunning
 	}
-	now := time.Now()
-	due := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
-	if now.Before(due) {
-		return false
-	}
-	if deepMarkerFile == "" {
-		deepMarkerFile = filepath.Join(tmpDir(), "deep.last")
-	}
-	if b, err := os.ReadFile(deepMarkerFile); err == nil {
-		if string(b) == due.Format("2006-01-02") {
-			return false
-		}
-	}
-	return true
-}
-
-func markDeepDone() {
-	if deepMarkerFile == "" {
-		deepMarkerFile = filepath.Join(tmpDir(), "deep.last")
-	}
-	_ = os.MkdirAll(filepath.Dir(deepMarkerFile), 0755)
-	_ = os.WriteFile(deepMarkerFile, []byte(time.Now().Format("2006-01-02")), 0644)
-}
-
-func tierDue(cfg *Config, tier string) (bool, time.Time) {
-	switch tier {
-	case "deep":
-		if deepDue(cfg) {
-			return true, time.Now()
-		}
-		if t, err := time.Parse("15:04", cfg.Tiers.Deep.Time); err == nil {
-			now := time.Now()
-			nt := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
-			if nt.Before(now) {
-				nt = nt.AddDate(0, 0, 1)
-			}
-			return false, nt
-		}
-		return false, time.Now().Add(time.Hour)
-	default:
-		var tc TierCfg
-		if tier == "hourly" {
-			tc = cfg.Tiers.Hourly
-		} else {
-			tc = cfg.Tiers.Region
-		}
-		last := lastRun[tier]
-		if last.IsZero() {
-			return true, time.Now().Add(30 * time.Second)
-		}
-		next := last.Add(time.Duration(tc.IntervalHours) * time.Hour)
-		return !now().Before(next), next
-	}
-}
-
-func now() time.Time { return time.Now() }
-
-// tryRunTier 触发一档，若该档正在运行则跳过
-func tryRunTier(cfg *Config, tier string, manual bool) (bool, error) {
-	schedMu.Lock()
-	if running[tier] {
-		schedMu.Unlock()
-		return false, fmt.Errorf("档位 [%s] 正在运行中", tier)
-	}
-	running[tier] = true
-	schedMu.Unlock()
+	running = true
+	schedMu2.Unlock()
 
 	go func() {
 		defer func() {
-			schedMu.Lock()
-			running[tier] = false
-			schedMu.Unlock()
+			schedMu2.Lock()
+			running = false
+			schedMu2.Unlock()
 		}()
-		err := RunTier(tier, cfg)
-		schedMu.Lock()
-		lastRun[tier] = time.Now()
-		schedMu.Unlock()
-		if tier == "deep" && err == nil {
-			markDeepDone()
-		}
+		err := RunOnce(cur())
+		resultMu.Lock()
+		lastRunAt = time.Now()
+		lastOK = err == nil
+		resultMu.Unlock()
 		if err != nil {
-			Log.Addf("档位 [%s] 异常结束: %v", tier, err)
+			Log.Addf("优选异常结束: %v", err)
 		}
 	}()
-	_ = manual
 	return true, nil
 }
 
-func schedulerLoop() {
+var errRunning = &staticError{"优选正在运行中"}
+
+type staticError struct{ s string }
+
+func (e *staticError) Error() string { return e.s }
+
+var schedMu2 sync.Mutex
+
+func scheduleLoop() {
 	tick := time.NewTicker(30 * time.Second)
 	defer tick.Stop()
 	for range tick.C {
 		cfg := cur()
-		schedMu.Lock()
-		var due []string
-		for _, tier := range []string{"hourly", "deep", "region"} {
-			var tc TierCfg
-			switch tier {
-			case "hourly":
-				tc = cfg.Tiers.Hourly
-			case "deep":
-				tc = cfg.Tiers.Deep
-			case "region":
-				tc = cfg.Tiers.Region
-			}
-			if !tc.Enabled || running[tier] {
-				continue
-			}
-			ok, _ := tierDue(cfg, tier)
-			if ok {
-				due = append(due, tier)
-			}
+		if !cfg.Schedule.Enabled {
+			continue
 		}
-		schedMu.Unlock()
-		for _, tier := range due {
-			Log.Addf("[调度] 档位 [%s] 到期，自动触发", tier)
-			tryRunTier(cfg, tier, false)
+		resultMu.RLock()
+		last := lastRunAt
+		isRunning := running
+		resultMu.RUnlock()
+		if isRunning {
+			continue
 		}
+		if !last.IsZero() && time.Since(last) < time.Duration(cfg.Schedule.IntervalHours)*time.Hour {
+			continue
+		}
+		Log.Addf("[定时更新] 到期，自动触发（间隔 %d 小时）", cfg.Schedule.IntervalHours)
+		tryRun()
 	}
 }
 
-func statusSnapshot(cfg *Config) []TierStatus {
-	schedMu.Lock()
-	defer schedMu.Unlock()
-	lastResultMu.RLock()
-	defer lastResultMu.RUnlock()
-
-	out := []TierStatus{}
-	for _, tier := range []string{"hourly", "deep", "region"} {
-		var tc TierCfg
-		switch tier {
-		case "hourly":
-			tc = cfg.Tiers.Hourly
-		case "deep":
-			tc = cfg.Tiers.Deep
-		case "region":
-			tc = cfg.Tiers.Region
-		}
-		st := TierStatus{Name: tier, Enabled: tc.Enabled, Running: running[tier]}
-		if lr, ok := lastRun[tier]; ok {
-			st.LastRun = lr.Format("01-02 15:04")
-		} else {
-			st.LastRun = "从未"
-		}
-		if r, ok := lastResult[tier]; ok {
-			st.LastOK = true
-			_ = r
-		}
-		_, next := tierDue(cfg, tier)
-		st.NextRun = next.Format("01-02 15:04")
-		out = append(out, st)
+func scheduleStatus(cfg *Config) ScheduleStatus {
+	resultMu.RLock()
+	last := lastRunAt
+	isRunning := running
+	ok := lastOK
+	resultMu.RUnlock()
+	st := ScheduleStatus{
+		Enabled:       cfg.Schedule.Enabled,
+		IntervalHours: cfg.Schedule.IntervalHours,
+		Running:       isRunning,
+		LastOK:        ok,
 	}
-	return out
+	if last.IsZero() {
+		st.LastRun = "从未"
+		next := time.Now().Add(30 * time.Second)
+		st.NextRun = next.Format("01-02 15:04")
+		if cfg.Schedule.Enabled {
+			st.LastRun = "从未（启动后自动首跑）"
+		}
+	} else {
+		st.LastRun = last.Format("01-02 15:04")
+		st.NextRun = last.Add(time.Duration(cfg.Schedule.IntervalHours) * time.Hour).Format("01-02 15:04")
+	}
+	return st
 }

@@ -35,12 +35,12 @@ func writeErr(w http.ResponseWriter, code int, msg string) {
 }
 
 type statusResp struct {
-	Version    string       `json:"version"`
-	Engine     string       `json:"engine"`
-	Busy       bool         `json:"busy"`
-	GistOK     bool         `json:"gist_configured"`
-	ConfigPath string       `json:"config_path"`
-	Tiers      []TierStatus `json:"tiers"`
+	Version    string         `json:"version"`
+	Engine     string         `json:"engine"`
+	Busy       bool           `json:"busy"`
+	GistOK     bool           `json:"gist_configured"`
+	ConfigPath string         `json:"config_path"`
+	Schedule   ScheduleStatus `json:"schedule"`
 }
 
 func apiStatus(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func apiStatus(w http.ResponseWriter, r *http.Request) {
 		Busy:       isBusy(),
 		GistOK:     c.Gist.Token != "" && c.Gist.ID != "",
 		ConfigPath: configPath,
-		Tiers:      statusSnapshot(c),
+		Schedule:   scheduleStatus(c),
 	})
 }
 
@@ -77,11 +77,11 @@ func apiSetConfig(w http.ResponseWriter, r *http.Request) {
 	if in.Gist.Token == "" && old.Gist.Token != "" {
 		in.Gist.Token = old.Gist.Token
 	}
-	if in.Listen == "" {
-		in.Listen = old.Listen
-	}
 	if in.Gist.Filename == "" {
 		in.Gist.Filename = old.Gist.Filename
+	}
+	if in.Listen == "" {
+		in.Listen = old.Listen
 	}
 	in.normalize()
 	if err := SaveConfig(configPath, &in); err != nil {
@@ -89,19 +89,13 @@ func apiSetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfgPtr.Store(&in)
-	Log.Addf("[配置] 已更新：源 %d 个 / 端口 %v / Top%d / Gist %s", len(in.Sources), in.Ports, in.TopN, in.Gist.ID)
+	Log.Addf("[配置] 已更新：方式 %s / 来源 %s / 源 %d 个 / 端口 %v / 地区过滤 %v / Top%d",
+		in.Method, in.SourceMode, len(in.Sources), in.Ports, in.Region.Enabled, in.TopN)
 	writeJSON(w, map[string]interface{}{"ok": true})
 }
 
 func apiRun(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Tier string `json:"tier"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || !validTier(in.Tier) {
-		writeErr(w, 400, "tier 无效（hourly/deep/region）")
-		return
-	}
-	started, err := tryRunTier(cur(), in.Tier, true)
+	started, err := tryRun()
 	if err != nil {
 		writeErr(w, 409, err.Error())
 		return
@@ -109,16 +103,10 @@ func apiRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{"ok": started})
 }
 
-func validTier(t string) bool { return t == "hourly" || t == "deep" || t == "region" }
-
 func apiResults(w http.ResponseWriter, r *http.Request) {
-	lastResultMu.RLock()
-	defer lastResultMu.RUnlock()
-	out := map[string]TierResult{}
-	for k, v := range lastResult {
-		out[k] = v
-	}
-	writeJSON(w, out)
+	resultMu.RLock()
+	defer resultMu.RUnlock()
+	writeJSON(w, lastResult)
 }
 
 func apiLogs(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +140,6 @@ func apiGistVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	content, err := gistGetFile(c.Gist.Token, c.Gist.ID, c.Gist.Filename, c.Gist.ProxyURL)
 	if err != nil {
-		// 文件不存在但 gist 本身可达的情况
 		if strings.Contains(err.Error(), "404") {
 			writeJSON(w, map[string]interface{}{"ok": true, "message": "Gist 可访问，目标文件 " + c.Gist.Filename + " 尚不存在（首次上传时创建）"})
 			return
@@ -170,19 +157,12 @@ func apiGistVerify(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiUpload(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Tier string `json:"tier"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&in)
-	if !validTier(in.Tier) {
-		in.Tier = "hourly"
-	}
 	c := cur()
-	filename := c.tierFilename(in.Tier)
+	filename := c.Gist.Filename
 	cacheFile := filepath.Join(tmpDir(), "state_"+filename+".txt")
 	data, err := os.ReadFile(cacheFile)
 	if err != nil {
-		writeErr(w, 404, "该档位暂无本地缓存结果，请先跑一轮测速")
+		writeErr(w, 404, "暂无本地缓存结果，请先跑一轮优选")
 		return
 	}
 	if err := gistPatchFile(c.Gist.Token, c.Gist.ID, filename, string(data), c.Gist.ProxyURL); err != nil {
@@ -232,7 +212,7 @@ func main() {
 	Log.Addf("cf-auto v%s 启动 | 配置: %s | 面板: %s | 引擎: %s (%s)",
 		Version, configPath, c.Listen, engineCurrentVersion(), cfstPath())
 
-	go schedulerLoop()
+	go scheduleLoop()
 
 	sub, err := fs.Sub(webFS, "web")
 	if err != nil {

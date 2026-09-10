@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
+	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,11 +19,14 @@ import (
 	"time"
 )
 
+//go:embed data/official_ips.txt
+var officialIPsFS embed.FS
+
 var engineBusy atomic.Bool
+var ipLineRe = regexp.MustCompile(`^((\d{1,3}\.){3}\d{1,3})(:\d+)?`)
+var cidrRe = regexp.MustCompile(`^((\d{1,3}\.){3}\d{1,3})/(\d{1,2})$`)
 
 func isBusy() bool { return engineBusy.Load() }
-
-var ipLineRe = regexp.MustCompile(`^((\d{1,3}\.){3}\d{1,3})(:\d+)?`)
 
 func fetchCandidates(sources []string) ([]string, error) {
 	set := map[string]bool{}
@@ -67,11 +72,36 @@ func fetchCandidates(sources []string) ([]string, error) {
 	return ips, nil
 }
 
-func runCfst(ctx context.Context, cfg *Config, port int, tier string, ipsFile, workDir string) ([]ResultRow, error) {
-	csvFile := filepath.Join(workDir, fmt.Sprintf("result_%d.csv", port))
+// fetchOfficialRanges 获取 Cloudflare 官方 IPv4 网段；在线失败时回退到内嵌快照
+func fetchOfficialRanges() ([]string, error) {
+	cli := &http.Client{Timeout: 20 * time.Second}
+	resp, err := cli.Get("https://api.cloudflare.com/client/v4/ips")
+	if err == nil {
+		defer resp.Body.Close()
+		var d struct {
+			Success bool `json:"success"`
+			Result  struct {
+				IPv4CIDRs []string `json:"ipv4_cidrs"`
+			} `json:"result"`
+		}
+		if json.NewDecoder(resp.Body).Decode(&d) == nil && d.Success && len(d.Result.IPv4CIDRs) > 0 {
+			Log.Addf("[候选池] Cloudflare 官方网段获取成功：%d 个 CIDR", len(d.Result.IPv4CIDRs))
+			return d.Result.IPv4CIDRs, nil
+		}
+	}
+	b, err := officialIPsFS.ReadFile("data/official_ips.txt")
+	if err != nil {
+		return nil, errors.New("官方网段获取失败且无内嵌快照")
+	}
+	Log.Addf("[候选池] 在线获取官方网段失败，使用内嵌快照")
+	return strings.Fields(string(b)), nil
+}
+
+func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile, workDir string) ([]ResultRow, error) {
+	csvFile := filepath.Join(workDir, fmt.Sprintf("result_%d_%s.csv", port, sanitize(region)))
 	_ = os.Remove(csvFile)
 	args := []string{
-		"-f", ipsFile,
+		"-f", listFile,
 		"-tp", strconv.Itoa(port),
 		"-p", "20",
 		"-o", csvFile,
@@ -82,16 +112,12 @@ func runCfst(ctx context.Context, cfg *Config, port int, tier string, ipsFile, w
 	if cfg.Cfst.TL > 0 {
 		args = append(args, "-tl", strconv.Itoa(cfg.Cfst.TL))
 	}
-	switch tier {
-	case "deep":
+	if region != "" {
+		args = append(args, "-httping", "-cfcolo", region)
+	}
+	if cfg.Method == "bandwidth" {
 		args = append(args, "-url", cfg.Cfst.URL, "-dn", strconv.Itoa(cfg.Cfst.DN), "-dt", strconv.Itoa(cfg.Cfst.DT))
-	case "region":
-		args = append(args, "-httping")
-		if colos := cfg.Tiers.Region.Colos; strings.TrimSpace(colos) != "" {
-			args = append(args, "-cfcolo", strings.TrimSpace(colos))
-		}
-		args = append(args, "-dd")
-	default: // hourly
+	} else {
 		args = append(args, "-dd")
 	}
 	if cfg.Cfst.ExtraArgs != "" {
@@ -102,7 +128,11 @@ func runCfst(ctx context.Context, cfg *Config, port int, tier string, ipsFile, w
 	if _, err := os.Stat(enginePath); err != nil {
 		return nil, fmt.Errorf("测速引擎不存在: %s", enginePath)
 	}
-	Log.Addf("[引擎] 端口 %d 档位 %s 启动 cfst %s", port, tier, strings.Join(args, " "))
+	label := fmt.Sprintf("端口 %d", port)
+	if region != "" {
+		label += " 机房 " + region
+	}
+	Log.Addf("[引擎] %s 模式 %s 启动 cfst %s", label, cfg.Method, strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, enginePath, args...)
 	cmd.Dir = filepath.Dir(enginePath)
 	out, err := cmd.CombinedOutput()
@@ -118,10 +148,19 @@ func runCfst(ctx context.Context, cfg *Config, port int, tier string, ipsFile, w
 	if err != nil {
 		return nil, fmt.Errorf("cfst 退出异常: %v", err)
 	}
-	return parseCfstCSV(csvFile, port)
+	return parseCfstCSV(csvFile, port, region)
 }
 
-func parseCfstCSV(path string, port int) ([]ResultRow, error) {
+func sanitize(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			return r
+		}
+		return '_'
+	}, s)
+}
+
+func parseCfstCSV(path string, port int, region string) ([]ResultRow, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("打开结果 CSV 失败: %v", err)
@@ -149,54 +188,70 @@ func parseCfstCSV(path string, port int) ([]ResultRow, error) {
 		}
 		lat, _ := strconv.ParseFloat(strings.TrimSpace(fl[4]), 64)
 		spd, _ := strconv.ParseFloat(strings.TrimSpace(fl[5]), 64)
-		if ipLineRe.FindStringSubmatch(ip) != nil {
-			rows = append(rows, ResultRow{IP: ip, Port: port, Latency: lat, Speed: spd})
-		}
+		rows = append(rows, ResultRow{IP: ip, Port: port, Latency: lat, Speed: spd, Region: region})
 	}
 	Log.Addf("[引擎] 端口 %d 解析到 %d 条有效结果", port, len(rows))
 	return rows, nil
 }
 
-// RunTier 执行一档完整流程：候选池 → 多端口测速 → 合并 → 上传
-func RunTier(tier string, cfg *Config) error {
+// RunOnce 完整一轮：候选池 → 测速（按方式/地区循环）→ 合并 → 上传
+func RunOnce(cfg *Config) error {
 	if !engineBusy.CompareAndSwap(false, true) {
 		return errors.New("测速引擎正忙，请稍后再试")
 	}
 	defer engineBusy.Store(false)
 
 	started := time.Now()
-	Log.Addf("======== 档位 [%s] 开始 ========", tier)
+	Log.Addf("======== 优选开始（方式 %s / 来源 %s）========", cfg.Method, cfg.SourceMode)
 
-	if len(cfg.Sources) == 0 {
-		return errors.New("优选源列表为空，请先在面板配置")
-	}
-	ips, err := fetchCandidates(cfg.Sources)
-	if err != nil {
-		return err
-	}
 	workDir := tmpDir()
 	_ = os.MkdirAll(workDir, 0755)
-	ipsFile := filepath.Join(workDir, "ips.txt")
-	if err := os.WriteFile(ipsFile, []byte(strings.Join(ips, "\n")), 0644); err != nil {
-		return err
+	listFile := filepath.Join(workDir, "ips.txt")
+
+	if cfg.SourceMode == "official" {
+		ranges, err := fetchOfficialRanges()
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(listFile, []byte(strings.Join(ranges, "\n")), 0644); err != nil {
+			return err
+		}
+	} else {
+		if len(cfg.Sources) == 0 {
+			return errors.New("优选源列表为空，请先在面板配置（或切换为 CF 官方源模式）")
+		}
+		ips, err := fetchCandidates(cfg.Sources)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(listFile, []byte(strings.Join(ips, "\n")), 0644); err != nil {
+			return err
+		}
+	}
+
+	regions := []string{""}
+	if cfg.Region.Enabled && len(cfg.Region.Colos) > 0 {
+		regions = cfg.Region.Colos
 	}
 
 	var allRows []ResultRow
 	for _, port := range cfg.Ports {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-		rows, err := runCfst(ctx, cfg, port, tier, ipsFile, workDir)
-		cancel()
-		if err != nil {
-			Log.Addf("[引擎] 端口 %d 测速失败: %v", port, err)
-			continue
+		for _, region := range regions {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+			rows, err := runCfst(ctx, cfg, port, region, listFile, workDir)
+			cancel()
+			if err != nil {
+				Log.Addf("[引擎] 端口 %d 机房 %s 测速失败: %v", port, region, err)
+				continue
+			}
+			allRows = append(allRows, rows...)
 		}
-		allRows = append(allRows, rows...)
 	}
 	if len(allRows) == 0 {
-		return errors.New("本轮无任何有效测速结果（候选池或阈值过严？）")
+		return errors.New("本轮无任何有效测速结果（候选池、阈值或机房过滤过严？）")
 	}
 
-	filename := cfg.tierFilename(tier)
+	filename := cfg.Gist.Filename
 	oldContent := ""
 	if cfg.Gist.Token != "" && cfg.Gist.ID != "" {
 		if c, err := gistGetFile(cfg.Gist.Token, cfg.Gist.ID, filename, cfg.Gist.ProxyURL); err == nil {
@@ -205,7 +260,6 @@ func RunTier(tier string, cfg *Config) error {
 			Log.Addf("[Gist] 读取现有结果失败（将全新开始）: %v", err)
 		}
 	}
-	// 本地缓存兜底（gist 不可读时）
 	cacheFile := filepath.Join(workDir, "state_"+filename+".txt")
 	if oldContent == "" {
 		if b, err := os.ReadFile(cacheFile); err == nil {
@@ -213,44 +267,41 @@ func RunTier(tier string, cfg *Config) error {
 		}
 	}
 
-	newContent, _, added, kept, dropped := mergeResults(oldContent, allRows, tier, cfg)
+	st := loadState()
+	ledger := st.Ledgers[filename]
+	newContent, stats := mergeResults(oldContent, allRows, ledger, cfg)
+	st.Ledgers[filename] = ledger
+	saveState(st)
 
 	if cfg.Gist.Token != "" && cfg.Gist.ID != "" {
 		if err := gistPatchFile(cfg.Gist.Token, cfg.Gist.ID, filename, newContent, cfg.Gist.ProxyURL); err != nil {
 			Log.Addf("[Gist] 上传失败: %v", err)
 			_ = os.WriteFile(cacheFile, []byte(newContent), 0644)
-			return fmt.Errorf("测速完成但上传失败: %v", err)
+			return fmt.Errorf("优选完成但上传失败: %v", err)
 		}
-		Log.Addf("[Gist] 已上传 %s (%d 行)", filename, len(mergedLineCount(newContent)))
+		Log.Addf("[Gist] 已上传 %s (%d 行)", filename, len(strings.Split(strings.TrimSpace(newContent), "\n")))
 	} else {
 		Log.Addf("[Gist] 未配置 Token/GistID，结果仅保存在本地 %s", cacheFile)
 	}
 	_ = os.WriteFile(cacheFile, []byte(newContent), 0644)
 
-	lastResultMu.Lock()
-	lastResult[tier] = TierResult{
-		Time:     started.Format("2006-01-02 15:04:05"),
-		Content:  newContent,
-		TestedN:  len(allRows),
-		Added:    added,
-		Kept:     kept,
-		Dropped:  dropped,
-		Filename: filename,
-	}
-	lastResultMu.Unlock()
+	stats.Content = newContent
+	resultMu.Lock()
+	lastResult = stats
+	resultMu.Unlock()
 
-	Log.Addf("======== 档位 [%s] 完成：上榜 %d（新增 %d 保留 %d 淘汰 %d）耗时 %s ========",
-		tier, len(mergedLineCount(newContent)), added, kept, dropped, time.Since(started).Round(time.Second))
+	Log.Addf("======== 优选完成：上榜 %d（新增 %d 保留 %d 淘汰 %d）耗时 %s ========",
+		countEntries(newContent), stats.Added, stats.Kept, stats.Dropped, time.Since(started).Round(time.Second))
 	return nil
 }
 
-func mergedLineCount(content string) []string {
-	var out []string
+func countEntries(content string) int {
+	n := 0
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
-			out = append(out, line)
+			n++
 		}
 	}
-	return out
+	return n
 }
