@@ -1,0 +1,11 @@
+Package: cf-auto
+Version: @VERSION@
+Depends: ca-bundle
+Source: none
+SourceName: cf-auto
+Section: net
+SourceDateEpoch: 1760000000
+Maintainer: ChEnLeo-7
+Architecture: @ARCH@
+Installed-Size: @SIZE@
+Description: CF preferred IP scheduled testing panel (integrated CloudflareSpeedTest engine, three-tier scheduling, automatic Gist updates)

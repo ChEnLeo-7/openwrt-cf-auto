@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cf-auto 优选面板</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>⚡ cf-auto <span class="sub">Cloudflare 优选 IP 自动化面板</span></h1>
+  <div id="hdr-status" class="hdr-status">加载中…</div>
+</header>
+
+<nav>
+  <button class="tab active" data-tab="dash">仪表盘</button>
+  <button class="tab" data-tab="cfg">测速设置</button>
+  <button class="tab" data-tab="gist">GitHub 与 Gist</button>
+  <button class="tab" data-tab="logs">日志</button>
+</nav>
+
+<main>
+<!-- ============ 仪表盘 ============ -->
+<section id="tab-dash" class="panel active">
+  <div class="cards">
+    <div class="card"><div class="k">程序版本</div><div class="v" id="st-version">-</div></div>
+    <div class="card"><div class="k">测速引擎</div><div class="v" id="st-engine">-</div></div>
+    <div class="card"><div class="k">引擎状态</div><div class="v" id="st-busy">-</div></div>
+    <div class="card"><div class="k">Gist 配置</div><div class="v" id="st-gist">-</div></div>
+  </div>
+
+  <h2>调度档位</h2>
+  <div class="cards">
+    <div class="card tier">
+      <div class="k">小时档（纯延迟快扫）</div>
+      <div class="v" id="tier-hourly-info">-</div>
+      <div class="btnrow"><button class="btn" data-run="hourly">立即运行</button><button class="btn ghost" data-upload="hourly">重传结果</button></div>
+    </div>
+    <div class="card tier">
+      <div class="k">夜间档（带宽深测）</div>
+      <div class="v" id="tier-deep-info">-</div>
+      <div class="btnrow"><button class="btn" data-run="deep">立即运行</button><button class="btn ghost" data-upload="deep">重传结果</button></div>
+    </div>
+    <div class="card tier">
+      <div class="k">区域档（落地机房定向）</div>
+      <div class="v" id="tier-region-info">-</div>
+      <div class="btnrow"><button class="btn" data-run="region">立即运行</button><button class="btn ghost" data-upload="region">重传结果</button></div>
+    </div>
+  </div>
+
+  <h2>最近结果</h2>
+  <div id="results-box" class="results">尚无结果，点击上方"立即运行"体验一轮完整优选。</div>
+</section>
+
+<!-- ============ 测速设置 ============ -->
+<section id="tab-cfg" class="panel">
+  <h2>优选订阅源（每行一个 URL）</h2>
+  <textarea id="cfg-sources" rows="6" placeholder="https://bestcf.pages.dev/cmliu/all.txt&#10;https://ips.gaoji.uk/best_ips.txt"></textarea>
+  <div class="hint">每行一个优选 IP 列表地址，支持 ip:port / 纯 IP / 带注释格式，自动去重合并为候选池。</div>
+
+  <h2>测速端口（可多选，每端口独立测一轮）</h2>
+  <div id="cfg-ports" class="chips"></div>
+  <div class="btnrow"><input type="number" id="cfg-port-custom" placeholder="自定义端口" min="1" max="65535"><button class="btn ghost" id="btn-add-port">添加端口</button></div>
+  <div class="hint">端口越多总耗时越长（每端口一轮）。443 最常用；8443/2053/2083/2087/2096 为 Cloudflare 常见回源端口。</div>
+
+  <h2>结果策略</h2>
+  <div class="grid3">
+    <label>上榜数量 TopN<input type="number" id="cfg-topn" min="1" max="50"></label>
+    <label>结果行数上限<input type="number" id="cfg-maxlines" min="5" max="50"></label>
+    <label>连续落榜淘汰轮数<input type="number" id="cfg-miss" min="1" max="20"></label>
+  </div>
+  <div class="hint">每轮新冠军进前排；老上榜 IP 仍达标则保留靠后；连续 N 轮未达标才淘汰。</div>
+
+  <h2>三档调度</h2>
+  <div class="tiercfg">
+    <div class="tierrow">
+      <label class="ck"><input type="checkbox" id="cfg-t-hourly-en"> 启用小时档</label>
+      <label>间隔（小时）<input type="number" id="cfg-t-hourly-int" min="1" max="24"></label>
+      <label>独立 Gist 文件名（留空用默认）<input type="text" id="cfg-t-hourly-file" placeholder="CF-Auto-Top.txt"></label>
+    </div>
+    <div class="tierrow">
+      <label class="ck"><input type="checkbox" id="cfg-t-deep-en"> 启用夜间深测档</label>
+      <label>每日时刻<input type="time" id="cfg-t-deep-time"></label>
+      <label>独立 Gist 文件名<input type="text" id="cfg-t-deep-file" placeholder="同默认"></label>
+    </div>
+    <div class="tierrow">
+      <label class="ck"><input type="checkbox" id="cfg-t-region-en"> 启用区域定向档</label>
+      <label>间隔（小时）<input type="number" id="cfg-t-region-int" min="1" max="24"></label>
+      <label>目标机房（逗号分隔）<input type="text" id="cfg-t-region-colos" placeholder="SIN,NRT,KIX"></label>
+      <label>独立 Gist 文件名<input type="text" id="cfg-t-region-file" placeholder="同默认"></label>
+    </div>
+  </div>
+  <div class="hint">区域档使用 HTTPing + -cfcolo 按真实落地机房过滤（香港 HKG、新加坡 SIN、东京 NRT、大阪 KIX 等 IATA 代码），比订阅源的"地区标注"更真实。</div>
+
+  <h2>CloudflareSpeedTest 参数</h2>
+  <div class="grid3">
+    <label>平均延迟上限 -tl (ms)<input type="number" id="cfg-cf-tl" min="0"></label>
+    <label>平均延迟下限 -tll (ms)<input type="number" id="cfg-cf-tll" min="0"></label>
+    <label>下载测速数量 -dn<input type="number" id="cfg-cf-dn" min="1" max="50"></label>
+    <label>每 IP 下载测速时长 -dt (秒)<input type="number" id="cfg-cf-dt" min="1" max="30"></label>
+  </div>
+  <label class="lbl">下载测速地址 -url<input type="text" id="cfg-cf-url"></label>
+  <label class="lbl">高级附加参数（原样追加，如 "-t 200 -tlr 0.1"）<input type="text" id="cfg-cf-extra" placeholder="留空即可"></label>
+
+  <div class="btnrow big"><button class="btn primary" id="btn-save-cfg">保存测速设置</button><span id="cfg-msg" class="msg"></span></div>
+</section>
+
+<!-- ============ GitHub 与 Gist ============ -->
+<section id="tab-gist" class="panel">
+  <h2>Gist 自动上传</h2>
+  <label class="lbl">GitHub Token<input type="password" id="cfg-g-token" placeholder="ghp_ 开头的经典 Token（留空表示不修改已保存的 Token）" autocomplete="off"></label>
+  <div class="grid3">
+    <label>Gist ID<input type="text" id="cfg-g-id" placeholder="17ee11e4…"></label>
+    <label>目标文件名<input type="text" id="cfg-g-file" placeholder="CF-Auto-Top.txt"></label>
+    <label>GitHub 代理（可选）<input type="text" id="cfg-g-proxy" placeholder="http://127.0.0.1:7890"></label>
+  </div>
+  <div class="hint">建议填独立文件名（如 CF-Auto-Top.txt），与人工精选文件互不干扰。GitHub API 直连不通时可填代理（如路由器 OpenClash 混合端口 http://用户:密码@127.0.0.1:13921）。</div>
+  <div class="btnrow big">
+    <button class="btn primary" id="btn-save-gist">保存 GitHub 配置</button>
+    <button class="btn" id="btn-verify">验证连接</button>
+    <span id="gist-msg" class="msg"></span>
+  </div>
+
+  <details class="tutorial">
+    <summary>📘 教程：三步获取 GitHub Token（用于自动更新 Gist）</summary>
+    <ol>
+      <li>浏览器打开 <b>github.com</b> 并登录 → 点右上角头像 → <b>Settings</b>（设置）</li>
+      <li>左栏最底部 <b>Developer settings</b>（开发者设置）→ <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b></li>
+      <li>Note 随便填（如 cf-auto），<b>Expiration</b> 选 No expiration（永不过期）或较长有效期，<b>勾选列表中唯一勾选框 select_scope: gist</b>（其他全部不勾，权限最小化）→ 拉到底点 <b>Generate token</b></li>
+      <li>复制生成的 <b>ghp_ 开头</b>的 Token（只显示一次），粘贴到本页上方"GitHub Token"输入框保存。</li>
+    </ol>
+    <p>Gist ID 的获取：打开你的 gist 页面，地址栏 <b>gist.github.com/用户名/这一串就是ID</b>。</p>
+  </details>
+
+  <h2>测速引擎（CloudflareSpeedTest）</h2>
+  <div class="grid3">
+    <label>当前版本<input type="text" id="eng-current" readonly></label>
+    <label>最新版本<input type="text" id="eng-latest" readonly></label>
+    <label>引擎路径<input type="text" id="eng-path" readonly></label>
+  </div>
+  <div class="btnrow"><button class="btn" id="btn-engine-check">检查更新</button><button class="btn" id="btn-engine-update">一键升级引擎</button><span id="eng-msg" class="msg"></span></div>
+  <div class="hint">引擎为 XIU2/CloudflareSpeedTest（GPL-3.0），升级时自动备份旧版，失败自动回滚。</div>
+</section>
+
+<!-- ============ 日志 ============ -->
+<section id="tab-logs" class="panel">
+  <div class="btnrow"><button class="btn ghost" id="btn-log-clear-view">清空显示</button><label class="ck"><input type="checkbox" id="log-auto" checked> 自动刷新</label></div>
+  <pre id="logbox" class="logbox"></pre>
+</section>
+</main>
+
+<footer>cf-auto — 在 OpenWRT 上本地运行的 Cloudflare 优选 IP 工具 · 引擎 XIU2/CloudflareSpeedTest (GPL-3.0)</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

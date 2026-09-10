@@ -1,0 +1,22 @@
+# 本地配置与机密（含 GitHub Token，严禁提交）
+config.dev.json
+config.json
+*.token
+backend.pid
+
+# 构建产物
+build/
+cf-auto-panel.exe
+*.ipk
+
+# 引擎二进制（build.ps1 会自动下载）
+vendor/linux-amd64/
+vendor/linux-arm64/
+vendor/windows-amd64/
+vendor/*.tar.gz
+vendor/*.zip
+
+# 编辑器/系统
+.vscode/
+.idea/
+Thumbs.db
