@@ -36,12 +36,15 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 
 /* ---- 顶栏：毛玻璃材质 ---- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; justify-content: space-between;
   padding: 12px 24px;
   background: var(--surface);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--hairline);
+}
+.topbar-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 880px; margin: 0 auto;
 }
 .brand { display: flex; align-items: baseline; gap: 8px; }
 .brand-mark { color: var(--accent); font-size: 17px; }
@@ -56,10 +59,12 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 
 
 /* ---- 分段式导航 ---- */
 .seg-nav {
-  display: flex; gap: 2px; margin: 16px 24px 0; padding: 3px;
-  background: var(--chip); border-radius: 10px; width: fit-content;
+  display: flex; gap: 2px; margin: 16px auto 0; padding: 3px;
+  max-width: 880px; box-sizing: border-box;
+  background: var(--chip); border-radius: 10px;
 }
 .seg-item {
+  flex: 1;
   border: none; background: transparent; color: var(--txt2);
   padding: 6px 20px; border-radius: 8px; font-size: 13.5px; cursor: pointer;
   font-family: var(--font); transition: all 180ms var(--ease);
@@ -67,7 +72,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 
 .seg-item.on { background: var(--surface-solid); color: var(--txt); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
 .seg-item:active { transform: scale(0.96); }
 
-main { margin: 0 24px 40px; padding: 4px 0; max-width: 860px; }
+main { max-width: 880px; margin: 0 auto 40px; padding: 4px 0; }
 .panel { display: none; }
 .panel.active { display: block; animation: appear 220ms var(--ease); }
 @keyframes appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
