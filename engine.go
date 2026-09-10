@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,10 +29,16 @@ var cidrRe = regexp.MustCompile(`^((\d{1,3}\.){3}\d{1,3})/(\d{1,2})$`)
 
 func isBusy() bool { return engineBusy.Load() }
 
-func fetchCandidates(sources []string) ([]string, error) {
+func fetchCandidates(sources []string, proxyURL string) ([]string, error) {
 	set := map[string]bool{}
 	var ips []string
-	cli := &http.Client{Timeout: 25 * time.Second}
+	tr := &http.Transport{}
+	if proxyURL != "" {
+		if u, err := url.Parse(proxyURL); err == nil {
+			tr.Proxy = http.ProxyURL(u)
+		}
+	}
+	cli := &http.Client{Timeout: 25 * time.Second, Transport: tr}
 	fetched := 0
 	for _, src := range sources {
 		src = strings.TrimSpace(src)
@@ -220,7 +227,7 @@ func RunOnce(cfg *Config) error {
 		if len(cfg.Sources) == 0 {
 			return errors.New("优选源列表为空，请先在面板配置（或切换为 CF 官方源模式）")
 		}
-		ips, err := fetchCandidates(cfg.Sources)
+		ips, err := fetchCandidates(cfg.Sources, cfg.Gist.ProxyURL)
 		if err != nil {
 			return err
 		}
@@ -269,6 +276,9 @@ func RunOnce(cfg *Config) error {
 
 	st := loadState()
 	ledger := st.Ledgers[filename]
+	if ledger == nil {
+		ledger = map[string]int{}
+	}
 	newContent, stats := mergeResults(oldContent, allRows, ledger, cfg)
 	st.Ledgers[filename] = ledger
 	saveState(st)
