@@ -16,7 +16,7 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const Version = "0.2.9"
+const Version = "0.3.0"
 
 var configPath string
 var cfgPtr atomic.Pointer[Config]
@@ -101,6 +101,19 @@ func apiRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]interface{}{"ok": started})
+}
+
+func apiStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, 405, "method not allowed")
+		return
+	}
+	if !isBusy() {
+		writeErr(w, 409, "当前没有正在进行的优选")
+		return
+	}
+	StopRun()
+	writeJSON(w, map[string]interface{}{"ok": true})
 }
 
 func apiResults(w http.ResponseWriter, r *http.Request) {
@@ -270,6 +283,7 @@ func main() {
 		apiGetConfig(w, r)
 	})
 	mux.HandleFunc("/api/run", apiRun)
+	mux.HandleFunc("/api/stop", apiStop)
 	mux.HandleFunc("/api/results", apiResults)
 	mux.HandleFunc("/api/logs", apiLogs)
 	mux.HandleFunc("/api/logs/export", apiLogsExport)

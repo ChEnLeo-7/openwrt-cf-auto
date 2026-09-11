@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -107,6 +108,23 @@ func fetchOfficialRanges() ([]string, error) {
 }
 
 var errNoQualified = errors.New("本轮 0 达标")
+var errStopped = errors.New("测速被终止")
+
+var (
+	runCancelMu sync.Mutex
+	runCancelFn context.CancelFunc
+)
+
+// StopRun 请求终止正在进行的优选；返回是否存在活动任务
+func StopRun() bool {
+	runCancelMu.Lock()
+	defer runCancelMu.Unlock()
+	if runCancelFn == nil {
+		return false
+	}
+	runCancelFn()
+	return true
+}
 
 func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile, workDir string) ([]ResultRow, error) {
 	csvFile := filepath.Join(workDir, fmt.Sprintf("result_%d_%s.csv", port, sanitize(region)))
@@ -157,6 +175,9 @@ func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile
 		}
 	}
 	if ctx.Err() != nil {
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return nil, errStopped
+		}
 		return nil, errors.New("测速超时被终止")
 	}
 	if err != nil {
@@ -221,6 +242,17 @@ func RunOnce(cfg *Config) error {
 	started := time.Now()
 	Log.Addf("======== 优选开始（方式 %s / 来源 %s）========", cfg.Method, cfg.SourceMode)
 
+	runCtx, cancel := context.WithCancel(context.Background())
+	runCancelMu.Lock()
+	runCancelFn = cancel
+	runCancelMu.Unlock()
+	defer func() {
+		runCancelMu.Lock()
+		runCancelFn = nil
+		runCancelMu.Unlock()
+		cancel()
+	}()
+
 	workDir := tmpDir()
 	_ = os.MkdirAll(workDir, 0755)
 	listFile := filepath.Join(workDir, "ips.txt")
@@ -266,10 +298,14 @@ func RunOnce(cfg *Config) error {
 	var allRows []ResultRow
 	for _, port := range cfg.Ports {
 		for _, region := range regions {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+			ctx, cancel := context.WithTimeout(runCtx, 30*time.Minute)
 			rows, err := runCfst(ctx, cfg, port, region, listFile, workDir)
 			cancel()
 			if err != nil {
+				if errors.Is(err, errStopped) || runCtx.Err() != nil {
+					Log.Addf("======== 优选已被用户终止，本轮结果不保存 ========")
+					return errors.New("优选已被用户终止")
+				}
 				if errors.Is(err, errNoQualified) {
 					if region != "" {
 						Log.Addf("[区域] 端口 %d 机房 %s 本轮 0 达标（本线路可能不路由到 %s），跳过", port, region, region)

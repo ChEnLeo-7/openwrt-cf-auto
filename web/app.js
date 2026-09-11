@@ -9,7 +9,7 @@ let tokenSaved = false;
 const I18N = {
   zh: {
     "tab.dash":"概览","tab.cfg":"优选设置","tab.gist":"GitHub","tab.logs":"日志",
-    "dash.run":"开始优选","dash.reupload":"重传结果","dash.results":"最近优选结果","dash.empty":"尚无结果 — 点击「开始优选」运行一轮。","dash.engine_h":"引擎升级",
+    "dash.run":"开始优选","dash.stop":"停止优选","dash.stopping":"正在停止…","dash.reupload":"重传结果","dash.results":"最近优选结果","dash.empty":"尚无结果 — 点击「开始优选」运行一轮。","dash.engine_h":"引擎升级",
     "card.version":"程序版本","card.engine":"测速引擎","card.schedule":"定时更新","card.gist":"Gist",
     "tbl.idx":"#","tbl.node":"节点","tbl.region":"地区","tbl.latency":"延迟","tbl.bandwidth":"带宽",
     "eng.current":"当前","eng.latest":"最新","eng.check":"检查更新","eng.update":"升级引擎","eng.autoupdate":"自动安装程序更新","eng.autoupdate_hint":"打开面板时自动检测一次，发现新版本弹出双语说明","app.check":"检查程序更新",
@@ -34,7 +34,7 @@ const I18N = {
   },
   en: {
     "tab.dash":"Overview","tab.cfg":"Optimization","tab.gist":"GitHub","tab.logs":"Logs",
-    "dash.run":"Start optimization","dash.reupload":"Re-upload","dash.results":"Latest results","dash.empty":"No results yet — click “Start optimization” to run once.","dash.engine_h":"Engine update",
+    "dash.run":"Start optimization","dash.stop":"Stop","dash.stopping":"Stopping…","dash.reupload":"Re-upload","dash.results":"Latest results","dash.empty":"No results yet — click “Start optimization” to run once.","dash.engine_h":"Engine update",
     "card.version":"App version","card.engine":"Test engine","card.schedule":"Scheduled update","card.gist":"Gist",
     "tbl.idx":"#","tbl.node":"Endpoint","tbl.region":"Region","tbl.latency":"Latency","tbl.bandwidth":"Bandwidth",
     "eng.current":"Current","eng.latest":"Latest","eng.check":"Check","eng.update":"Update engine","eng.autoupdate":"Auto-install app updates","eng.autoupdate_hint":"Checks once when the panel opens; shows a dialog if a new version is found.","app.check":"Check app update",
@@ -144,6 +144,7 @@ async function refreshStatus() {
       : t("status.closed");
     $("hdr-status").textContent = `v${s.version} · ${s.busy ? t("status.running") : t("status.idle")}`;
     $("btn-run").disabled = s.busy;
+    $("btn-stop").classList.toggle("hide", !s.busy);
     const last = sc.last_run || t("status.never");
     $("run-meta").textContent = sc.enabled
       ? `${t("status.last")}: ${last} · ${t("status.next")}: ${sc.next_run}`
@@ -269,6 +270,8 @@ const LOG_EN = [
   [/\[社区库\] 运营商 (\S+) \((\w+)\) → 去重 (\d+) 段/g, "[Community] ISP $2 ($1): $3 deduped ranges"],
   [/\[社区库\] 获取失败（.+?），回退 CF 官方网段/g, "[Community] fetch failed ($1), falling back to official CF ranges"],
   [/\[Gist\] 自动上传已关闭，结果仅保存在本地（可在概览页手动上传）/g, "[Gist] auto-upload is off; result saved locally (re-upload manually from Overview)"],
+  [/优选已被用户终止，本轮结果不保存/g, "run cancelled by user; this round's results are discarded"],
+  [/优选已被用户终止/g, "run cancelled by user"],
   [/\[地区\] 已补全 (\d+)\/(\d+) 个候选的落地机房/g, "[Region] enriched $1/$2 candidates with landing colo"],
   [/\[地区\] trace 探测全部失败（当前线路对 CF 的 TLS 受干扰），地区留空/g, "[Region] trace probes all failed (CF TLS is being interfered with on this line); region left blank"],
   [/\[社区库\]/g, "[Community]"],
@@ -576,6 +579,15 @@ $("btn-run").onclick = async () => {
     refreshStatus();
     setTimeout(refreshResults, 4000);
   } catch (e) { alert(t("msg.run_fail") + e.message); $("btn-run").disabled = false; }
+};
+$("btn-stop").onclick = async () => {
+  const b = $("btn-stop");
+  if (b.disabled) return;
+  b.disabled = true;
+  b.dataset.label = b.dataset.label || b.textContent;
+  b.textContent = t("dash.stopping");
+  try { await api("/api/stop", { method: "POST" }); } catch (e) { /* ignore */ }
+  setTimeout(() => { b.disabled = false; b.textContent = b.dataset.label; refreshStatus(); }, 2500);
 };
 $("btn-reupload").onclick = async () => {
   try { await api("/api/upload", { method: "POST" }); alert(t("msg.reupload_ok")); }
