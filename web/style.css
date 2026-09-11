@@ -33,6 +33,35 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 
 .hide { display: none !important; }
 .grow { flex: 1; }
 
+/* ---- 概览：运行状态横幅 ---- */
+.status-banner {
+  display: flex; align-items: center; gap: 14px;
+  margin: 20px 0 4px; padding: 16px 18px;
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  transition: border-color 250ms var(--ease), background 250ms var(--ease);
+}
+.status-dot { position: relative; width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--txt3); }
+.status-txt { min-width: 0; }
+.st-main { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.st-sub { font-size: 12.5px; color: var(--txt2); margin-top: 2px; }
+.status-banner.running { border-color: rgba(52, 199, 89, 0.45); }
+.status-banner.running .status-dot { background: #34c759; }
+.status-banner.running .status-dot::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid #34c759; opacity: 0.6;
+  animation: pulse-ring 1.8s var(--ease) infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.7); opacity: 0.6; }
+  70% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-banner.running .status-dot::after { animation: none; }
+}
+
 /* ---- 顶栏：毛玻璃材质 ---- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
@@ -182,6 +211,9 @@ label { display: block; font-size: 12px; color: var(--txt2); }
   height: 58vh; overflow: auto; color: var(--txt2);
 }
 .switch-inline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--txt2); cursor: pointer; }
+.log-bar { align-items: center; margin-bottom: 10px; }
+.btn-ghost.danger { color: #ff453a; }
+.btn-ghost.danger.armed { background: rgba(255, 69, 58, 0.12); border-color: rgba(255, 69, 58, 0.5); color: #ff453a; }
 
 /* ---- 教程 ---- */
 .tutorial { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px 16px; margin: 14px 0; font-size: 13px; }

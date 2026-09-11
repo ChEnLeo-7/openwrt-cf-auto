@@ -45,3 +45,15 @@ func (r *Ring) Snapshot(after int) ([]string, int) {
 	out := append([]string{}, r.lines[after+1:]...)
 	return out, n - 1
 }
+
+func (r *Ring) All() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string{}, r.lines...)
+}
+
+func (r *Ring) Clear() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lines = nil
+}

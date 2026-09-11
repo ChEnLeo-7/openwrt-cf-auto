@@ -25,8 +25,9 @@ const I18N = {
     "cfg.sched_h":"定时更新","cfg.sched_en":"自动优选并更新 Gist","cfg.sched_int":"更新间隔（小时）","cfg.sched_hint":"到点按当前优选方式、来源、地区和端口执行完整一轮。","cfg.appupdate_h":"程序更新","cfg.appupdate_hint":"打开面板时自动检测一次更新，发现新版本会弹出双语 Release 说明。","cfg.save":"保存设置",
     "gist.h":"Gist 自动上传","gist.token":"GitHub Token","gist.token_ph":"ghp_ 开头经典 Token（留空表示不修改）","gist.token_saved_ph":"已保存（留空 = 不修改）","gist.id":"Gist ID","gist.file":"目标文件名","gist.proxy":"GitHub 代理（可选）","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"保存","gist.verify":"验证连接",
     "tut.title":"如何获取 GitHub Token（三步）","tut.s1":"登录 GitHub → 头像 → Settings。","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)。","tut.s3":"选择有效期，只勾选 gist，生成后复制 ghp_ 开头的 Token。","tut.gistid":"Gist ID 位于 gist 页面 URL：gist.github.com/用户名/ID。",
-    "logs.auto":"自动刷新","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
+    "logs.auto":"自动刷新","logs.copy":"复制日志","logs.export":"导出 txt","logs.clear":"清空日志","logs.confirm_clear":"确认清空？","logs.copied":"已复制 ✓","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
     "status.configured":"已配置","status.unconfigured":"未配置","status.running":"运行中","status.idle":"空闲","status.closed":"已关闭","status.every":"每 {h} 小时","status.last":"上次","status.next":"下次","status.never":"从未（启动后自动首跑）","status.backend_fail":"后端连接失败",
+    "status.run_main":"优选运行中","status.run_sub":"正在实测候选 IP，完成后自动更新 Gist","status.wait_main":"待机中 · 定时更新已开启","status.off_main":"空闲 · 定时更新未开启","status.off_sub":"可在下方手动开始优选",
     "msg.saved":"已保存 ✓","msg.save_fail":"保存失败：","msg.checking":"检查中…","msg.latest":"已是最新版 ✓","msg.engine_upgrade":"可升级：{a} → {b}","msg.reupload_ok":"重传成功","msg.reupload_fail":"重传失败：","msg.run_fail":"触发失败：","msg.engine_confirm":"确认下载并替换测速引擎？失败会自动回滚。","msg.upgrading":"升级中…","msg.upgraded":"已升级到 {v} ✓",
     "theme.title":"切换浅色 / 深色","rel.title":"发现新版本 {v}","rel.goto":"查看 Release","rel.install":"立即更新","rel.skip":"忽略此版本","rel.none":"当前已是最新版本","rel.check_fail":"程序更新检查失败：","rel.installing":"正在下载并安装，服务将自动重启…","rel.autostarted":"已自动开始更新，服务将在几秒后重启"
   },
@@ -48,8 +49,9 @@ const I18N = {
     "cfg.sched_h":"Scheduled update","cfg.sched_en":"Automatically optimize and update Gist","cfg.sched_int":"Update interval (hours)","cfg.sched_hint":"Runs a full optimization using the current method, source, regions, and ports.","cfg.appupdate_h":"Application updates","cfg.appupdate_hint":"Checks for updates automatically each time the panel opens; a bilingual notes dialog appears when a new version is found.","cfg.save":"Save settings",
     "gist.h":"Automatic Gist upload","gist.token":"GitHub token","gist.token_ph":"Classic ghp_ token (leave blank to keep current)","gist.token_saved_ph":"Saved (leave blank to keep it)","gist.id":"Gist ID","gist.file":"Target filename","gist.proxy":"GitHub proxy (optional)","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"Save","gist.verify":"Verify connection",
     "tut.title":"Get a GitHub token in three steps","tut.s1":"Sign in to GitHub → avatar → Settings.","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic).","tut.s3":"Choose an expiration, select only gist, generate it, and copy the ghp_ token.","tut.gistid":"The Gist ID is in the URL: gist.github.com/username/ID.",
-    "logs.auto":"Auto refresh","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
+    "logs.auto":"Auto refresh","logs.copy":"Copy log","logs.export":"Export txt","logs.clear":"Clear log","logs.confirm_clear":"Confirm clear?","logs.copied":"Copied ✓","footer":"cf-auto · CloudflareSpeedTest (GPL-3.0) · MIT",
     "status.configured":"Configured","status.unconfigured":"Not configured","status.running":"Running","status.idle":"Idle","status.closed":"Disabled","status.every":"Every {h} hours","status.last":"Last","status.next":"Next","status.never":"Never (first run starts automatically)","status.backend_fail":"Backend unavailable",
+    "status.run_main":"Optimization running","status.run_sub":"Testing candidate IPs; Gist updates automatically when finished","status.wait_main":"Standing by · scheduled updates on","status.off_main":"Idle · scheduled updates off","status.off_sub":"Start an optimization manually below",
     "msg.saved":"Saved ✓","msg.save_fail":"Save failed: ","msg.checking":"Checking…","msg.latest":"Already up to date ✓","msg.engine_upgrade":"Update available: {a} → {b}","msg.reupload_ok":"Re-upload complete","msg.reupload_fail":"Re-upload failed: ","msg.run_fail":"Failed to start: ","msg.engine_confirm":"Download and replace the test engine? Failures automatically roll back.","msg.upgrading":"Updating…","msg.upgraded":"Updated to {v} ✓",
     "theme.title":"Switch light / dark","rel.title":"New version {v} available","rel.goto":"View Release","rel.install":"Update now","rel.skip":"Ignore this version","rel.none":"You are up to date","rel.check_fail":"App update check failed: ","rel.installing":"Downloading and installing; the service will restart automatically…","rel.autostarted":"Auto-update started; the service will restart shortly"
   }
@@ -144,6 +146,19 @@ async function refreshStatus() {
     $("run-meta").textContent = sc.enabled
       ? `${t("status.last")}: ${last} · ${t("status.next")}: ${sc.next_run}`
       : `${t("status.last")}: ${last} · ${t("status.closed")}`;
+    const banner = $("run-status");
+    banner.classList.toggle("running", s.busy);
+    banner.classList.toggle("idle", !s.busy);
+    if (s.busy) {
+      $("status-main").textContent = t("status.run_main");
+      $("status-sub").textContent = t("status.run_sub");
+    } else if (sc.enabled) {
+      $("status-main").textContent = t("status.wait_main");
+      $("status-sub").textContent = `${fmt("status.every", {h: sc.interval_hours})} · ${t("status.next")}: ${sc.next_run}`;
+    } else {
+      $("status-main").textContent = t("status.off_main");
+      $("status-sub").textContent = t("status.off_sub");
+    }
   } catch (e) { $("hdr-status").textContent = t("status.backend_fail"); }
 }
 setInterval(refreshStatus, 5000);
@@ -277,6 +292,59 @@ async function refreshLogs(reset) {
   } catch (e) { /* ignore */ }
 }
 setInterval(() => { if ($("log-auto").checked && $("tab-logs").classList.contains("active")) refreshLogs(false); }, 3000);
+
+function logText() {
+  return rawLog.map(l => LANG === "en" ? zhToEn(l) : l).join("\n");
+}
+function flashBtn(btn, text) {
+  const orig = btn.dataset.label || btn.textContent;
+  if (!btn.dataset.label) btn.dataset.label = orig;
+  btn.textContent = text;
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => { btn.textContent = btn.dataset.label; }, 1400);
+}
+$("btn-log-copy").onclick = async () => {
+  const btn = $("btn-log-copy");
+  try {
+    await navigator.clipboard.writeText(logText());
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = logText();
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  flashBtn(btn, t("logs.copied"));
+};
+$("btn-log-export").onclick = () => {
+  const blob = new Blob([logText()], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  a.href = URL.createObjectURL(blob);
+  a.download = `cf-auto-log-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+let clearArm = null;
+$("btn-log-clear").onclick = async () => {
+  const btn = $("btn-log-clear");
+  if (!clearArm) {
+    clearArm = setTimeout(() => { clearArm = null; btn.classList.remove("armed"); btn.textContent = btn.dataset.label || t("logs.clear"); }, 3000);
+    btn.classList.add("armed");
+    btn.textContent = t("logs.confirm_clear");
+    return;
+  }
+  clearTimeout(clearArm); clearArm = null;
+  btn.classList.remove("armed");
+  btn.textContent = btn.dataset.label || t("logs.clear");
+  try {
+    await api("/api/logs/clear", { method: "POST" });
+    logNext = -1; rawLog = [];
+    renderLog();
+  } catch (e) { /* ignore */ }
+};
 
 /* ================= 分段控件 ================= */
 function bindSeg(id, onChange) {

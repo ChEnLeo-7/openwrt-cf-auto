@@ -36,6 +36,14 @@
 <main>
 <!-- ================= 概览 ================= -->
 <section id="tab-dash" class="panel active">
+  <div id="run-status" class="status-banner idle">
+    <span class="status-dot"></span>
+    <div class="status-txt">
+      <div class="st-main" id="status-main">—</div>
+      <div class="st-sub" id="status-sub"></div>
+    </div>
+  </div>
+
   <div class="run-row">
     <button id="btn-run" class="btn-primary" data-i18n="dash.run"></button>
     <button id="btn-reupload" class="btn-ghost" data-i18n="dash.reupload"></button>
@@ -190,7 +198,13 @@
 
 <!-- ================= 日志 ================= -->
 <section id="tab-logs" class="panel">
-  <div class="btnrow"><label class="switch-inline"><input type="checkbox" id="log-auto" checked><span data-i18n="logs.auto"></span></label></div>
+  <div class="btnrow log-bar">
+    <label class="switch-inline"><span class="switch"><input type="checkbox" id="log-auto" checked><i></i></span><span data-i18n="logs.auto"></span></label>
+    <span class="grow"></span>
+    <button class="btn-ghost" id="btn-log-copy" data-i18n="logs.copy"></button>
+    <button class="btn-ghost" id="btn-log-export" data-i18n="logs.export"></button>
+    <button class="btn-ghost danger" id="btn-log-clear" data-i18n="logs.clear"></button>
+  </div>
   <pre id="logbox" class="logbox"></pre>
 </section>
 </main>

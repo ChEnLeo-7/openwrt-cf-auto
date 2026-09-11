@@ -16,7 +16,7 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const Version = "0.2.4"
+const Version = "0.2.5"
 
 var configPath string
 var cfgPtr atomic.Pointer[Config]
@@ -113,6 +113,24 @@ func apiLogs(w http.ResponseWriter, r *http.Request) {
 	after := atoiDefault(r.URL.Query().Get("after"), -1)
 	lines, next := Log.Snapshot(after)
 	writeJSON(w, map[string]interface{}{"lines": lines, "next": next})
+}
+
+func apiLogsExport(w http.ResponseWriter, r *http.Request) {
+	lines := Log.All()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="cf-auto-log.txt"`)
+	for _, l := range lines {
+		fmt.Fprintln(w, l)
+	}
+}
+
+func apiLogsClear(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, 405, "method not allowed")
+		return
+	}
+	Log.Clear()
+	writeJSON(w, map[string]interface{}{"ok": true})
 }
 
 func atoiDefault(s string, d int) int {
@@ -254,6 +272,8 @@ func main() {
 	mux.HandleFunc("/api/run", apiRun)
 	mux.HandleFunc("/api/results", apiResults)
 	mux.HandleFunc("/api/logs", apiLogs)
+	mux.HandleFunc("/api/logs/export", apiLogsExport)
+	mux.HandleFunc("/api/logs/clear", apiLogsClear)
 	mux.HandleFunc("/api/gist/verify", apiGistVerify)
 	mux.HandleFunc("/api/upload", apiUpload)
 	mux.HandleFunc("/api/engine", func(w http.ResponseWriter, r *http.Request) {
