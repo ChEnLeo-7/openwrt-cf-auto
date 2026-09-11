@@ -32,7 +32,22 @@ var cidrRe = regexp.MustCompile(`^((\d{1,3}\.){3}\d{1,3})/(\d{1,2})$`)
 
 func isBusy() bool { return engineBusy.Load() }
 
+// fetchCandidates 拉取自定义优选源；配置了代理时先走代理，失败自动回退直连
 func fetchCandidates(sources []string, proxyURL string) ([]string, error) {
+	ips, err := fetchCandidatesVia(sources, proxyURL)
+	if err == nil {
+		return ips, nil
+	}
+	if proxyURL != "" {
+		Log.Addf("[候选池] 经代理拉取失败，改为直连重试")
+		if ips2, err2 := fetchCandidatesVia(sources, ""); err2 == nil {
+			return ips2, nil
+		}
+	}
+	return nil, err
+}
+
+func fetchCandidatesVia(sources []string, proxyURL string) ([]string, error) {
 	set := map[string]bool{}
 	var ips []string
 	tr := &http.Transport{}
