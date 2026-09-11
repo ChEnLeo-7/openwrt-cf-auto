@@ -16,7 +16,7 @@ import (
 //go:embed web
 var webFS embed.FS
 
-const Version = "0.2.7"
+const Version = "0.2.8"
 
 var configPath string
 var cfgPtr atomic.Pointer[Config]

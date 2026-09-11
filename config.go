@@ -39,10 +39,11 @@ type CfstCfg struct {
 }
 
 type GistCfg struct {
-	Token    string `json:"token"`
-	ID       string `json:"id"`
-	Filename string `json:"filename"`
-	ProxyURL string `json:"proxy_url"`
+	Token      string `json:"token"`
+	ID         string `json:"id"`
+	Filename   string `json:"filename"`
+	ProxyURL   string `json:"proxy_url"`
+	AutoUpload *bool  `json:"auto_upload"` // 优选完成后自动上传；nil 视为 true
 }
 
 type Config struct {

@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -286,6 +288,8 @@ func RunOnce(cfg *Config) error {
 		return errors.New("本轮无任何有效测速结果（候选池、阈值或机房过滤过严？）")
 	}
 
+	enrichRegions(allRows, cfg)
+
 	filename := cfg.Gist.Filename
 	oldContent := ""
 	if cfg.Gist.Token != "" && cfg.Gist.ID != "" {
@@ -312,12 +316,15 @@ func RunOnce(cfg *Config) error {
 	saveState(st)
 
 	if cfg.Gist.Token != "" && cfg.Gist.ID != "" {
-		if err := gistPatchFile(cfg.Gist.Token, cfg.Gist.ID, filename, newContent, cfg.Gist.ProxyURL); err != nil {
+		if cfg.Gist.AutoUpload != nil && !*cfg.Gist.AutoUpload {
+			Log.Addf("[Gist] 自动上传已关闭，结果仅保存在本地（可在概览页手动上传）")
+		} else if err := gistPatchFile(cfg.Gist.Token, cfg.Gist.ID, filename, newContent, cfg.Gist.ProxyURL); err != nil {
 			Log.Addf("[Gist] 上传失败: %v", err)
 			_ = os.WriteFile(cacheFile, []byte(newContent), 0644)
 			return fmt.Errorf("优选完成但上传失败: %v", err)
+		} else {
+			Log.Addf("[Gist] 已上传 %s (%d 行)", filename, len(strings.Split(strings.TrimSpace(newContent), "\n")))
 		}
-		Log.Addf("[Gist] 已上传 %s (%d 行)", filename, len(strings.Split(strings.TrimSpace(newContent), "\n")))
 	} else {
 		Log.Addf("[Gist] 未配置 Token/GistID，结果仅保存在本地 %s", cacheFile)
 	}
@@ -342,4 +349,87 @@ func countEntries(content string) int {
 		}
 	}
 	return n
+}
+
+// enrichRegions 为缺少地区信息的结果补全落地机房（通过 CF 的 cdn-cgi/trace 接口）。
+// 区域定向开启时 httping 已带地区，无需处理；仅补全最可能上榜的候选，控制耗时。
+func enrichRegions(rows []ResultRow, cfg *Config) {
+	if cfg.Region.Enabled {
+		return
+	}
+	var pending []*ResultRow
+	for i := range rows {
+		if rows[i].Region == "" && rows[i].Latency > 0 {
+			pending = append(pending, &rows[i])
+		}
+	}
+	if len(pending) == 0 {
+		return
+	}
+	sort.Slice(pending, func(i, j int) bool { return pending[i].Latency < pending[j].Latency })
+	limit := cfg.TopN + 60
+	if len(pending) > limit {
+		pending = pending[:limit]
+	}
+
+	sem := make(chan struct{}, 10)
+	done := make(chan struct{}, len(pending))
+	for _, r := range pending {
+		sem <- struct{}{}
+		go func(r *ResultRow) {
+			defer func() { <-sem; done <- struct{}{} }()
+			if colo := fetchColo(r.IP, r.Port); colo != "" {
+				r.Region = colo
+			}
+		}(r)
+	}
+	for range pending {
+		<-done
+	}
+	ok := 0
+	for _, r := range pending {
+		if r.Region != "" {
+			ok++
+		}
+	}
+	Log.Addf("[地区] 已补全 %d/%d 个候选的落地机房", ok, len(pending))
+}
+
+// fetchColo 直连该 IP 的 /cdn-cgi/trace 读取落地机房代码
+func fetchColo(ip string, port int) string {
+	d := &net.Dialer{Timeout: 4 * time.Second}
+	conn, err := tls.DialWithDialer(d, "tcp", net.JoinHostPort(ip, strconv.Itoa(port)), &tls.Config{
+		ServerName:         ip,
+		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS12,
+	})
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(4 * time.Second))
+	if _, err := fmt.Fprintf(conn, "GET /cdn-cgi/trace HTTP/1.1\r\nHost: %s\r\nUser-Agent: cf-auto\r\nConnection: close\r\n\r\n", ip); err != nil {
+		return ""
+	}
+	buf := make([]byte, 0, 4096)
+	tmp := make([]byte, 1024)
+	for len(buf) < 16*1024 {
+		n, err := conn.Read(tmp)
+		if n > 0 {
+			buf = append(buf, tmp[:n]...)
+			if i := strings.Index(string(buf), "colo="); i >= 0 {
+				break
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	for _, line := range strings.Split(string(buf), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "colo=") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "colo="))
+		}
+	}
+	return ""
 }
