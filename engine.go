@@ -392,14 +392,21 @@ func enrichRegions(rows []ResultRow, cfg *Config) {
 			ok++
 		}
 	}
-	Log.Addf("[地区] 已补全 %d/%d 个候选的落地机房", ok, len(pending))
+	if ok == 0 {
+		Log.Addf("[地区] trace 探测全部失败（当前线路对 CF 的 TLS 受干扰），地区留空")
+	} else {
+		Log.Addf("[地区] 已补全 %d/%d 个候选的落地机房", ok, len(pending))
+	}
 }
 
-// fetchColo 直连该 IP 的 /cdn-cgi/trace 读取落地机房代码
+// fetchColo 直连该 IP 的 /cdn-cgi/trace 读取落地机房代码。
+// SNI/Host 必须用真实域名（与 cfst 下载测速同款形态）：SNI=裸 IP 是典型扫描器特征，
+// 会被运营商/GFW 针对性重置，导致地区探测全灭。
 func fetchColo(ip string, port int) string {
+	const traceHost = "speed.cloudflare.com"
 	d := &net.Dialer{Timeout: 4 * time.Second}
 	conn, err := tls.DialWithDialer(d, "tcp", net.JoinHostPort(ip, strconv.Itoa(port)), &tls.Config{
-		ServerName:         ip,
+		ServerName:         traceHost,
 		InsecureSkipVerify: true,
 		MinVersion:         tls.VersionTLS12,
 	})
@@ -408,7 +415,7 @@ func fetchColo(ip string, port int) string {
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(4 * time.Second))
-	if _, err := fmt.Fprintf(conn, "GET /cdn-cgi/trace HTTP/1.1\r\nHost: %s\r\nUser-Agent: cf-auto\r\nConnection: close\r\n\r\n", ip); err != nil {
+	if _, err := fmt.Fprintf(conn, "GET /cdn-cgi/trace HTTP/1.1\r\nHost: %s\r\nUser-Agent: cf-auto\r\nConnection: close\r\n\r\n", traceHost); err != nil {
 		return ""
 	}
 	buf := make([]byte, 0, 4096)

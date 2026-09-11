@@ -270,6 +270,7 @@ const LOG_EN = [
   [/\[社区库\] 获取失败（.+?），回退 CF 官方网段/g, "[Community] fetch failed ($1), falling back to official CF ranges"],
   [/\[Gist\] 自动上传已关闭，结果仅保存在本地（可在概览页手动上传）/g, "[Gist] auto-upload is off; result saved locally (re-upload manually from Overview)"],
   [/\[地区\] 已补全 (\d+)\/(\d+) 个候选的落地机房/g, "[Region] enriched $1/$2 candidates with landing colo"],
+  [/\[地区\] trace 探测全部失败（当前线路对 CF 的 TLS 受干扰），地区留空/g, "[Region] trace probes all failed (CF TLS is being interfered with on this line); region left blank"],
   [/\[社区库\]/g, "[Community]"],
   [/\[引擎\]/g, "[Engine]"],
   [/\[配置\]/g, "[Config]"],
