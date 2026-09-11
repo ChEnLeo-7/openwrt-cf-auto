@@ -42,8 +42,7 @@ https://bestcf.pages.dev/cmliu/all.txt
 
 | 源 | 条数 | 说明 / 地区 |
 |---|---|---|
-| `https://ipdb.api.030101.xyz/?type=bestproxy&country=true` | 108 | 🌍 地区最全：SG 22 / NL 19 / GB 15 / KR 13 / JP 11 / HK 7 / US 6 等，自带国家标注 |
-| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | 全球扫段 Top100（US 为主 + JP），自动更新 |
+| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | 全球扫段 Top100（US 为主 + JP），自动更新，含少量第三方 CF 中转 |
 | `https://cdn.jsdelivr.net/gh/joname1/BestCFip@main/ipv4.txt` | 96 | 自动采集，US 为主，带地区标注 |
 | `https://bestcf.pages.dev/cmliu/all.txt` | 34 | CMLiussss 优选，多为 SIN |
 | `https://addressesapi.090227.xyz/CloudFlareYes` | 15 | CM/CU/CT 三网综合 |
@@ -53,6 +52,7 @@ https://bestcf.pages.dev/cmliu/all.txt
 | `https://bestcf.pages.dev/domain/ygkkk/all.txt`、`/domain/qms/all.txt` | 各 2 | 甬哥/秋名山域名反代优选 |
 | `https://ip.164746.xyz/ipTop10.html` | 10 | 每日 Top10（逗号分隔格式） |
 
+> ⚠️ `ipdb.api.030101.xyz/?type=bestproxy&country=true` 虽然带国家标注、地区覆盖广，但它是 **ED 反代用的 PROXYIP 池，不是 Cloudflare 边缘 IP**——加进优选源会导致一批"假候选"（有延迟、无带宽、无地区、订阅里不可用），请勿使用。
 > 想要特定地区上榜（新加坡/日本/香港/美国等）：来源只决定候选池，配合「区域定向」勾选目标机房（SIN/NRT/HKG/LAX/SJC…）即可精确筛选；美国节点普遍 150ms+，需适当放宽平均延迟上限。
 
 ## 区域定向

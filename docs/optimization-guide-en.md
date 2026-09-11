@@ -42,8 +42,7 @@ https://bestcf.pages.dev/cmliu/all.txt
 
 | Source | Lines | Description / regions |
 |---|---|---|
-| `https://ipdb.api.030101.xyz/?type=bestproxy&country=true` | 108 | 🌍 Best coverage: SG 22 / NL 19 / GB 15 / KR 13 / JP 11 / HK 7 / US 6, country-tagged |
-| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | Global scan Top100 (mostly US + JP), auto-updated |
+| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | Global scan Top100 (mostly US + JP), auto-updated, includes a few third-party CF relays |
 | `https://cdn.jsdelivr.net/gh/joname1/BestCFip@main/ipv4.txt` | 96 | Auto-collected, mostly US, region-tagged |
 | `https://bestcf.pages.dev/cmliu/all.txt` | 34 | CMLiussss picks, mostly SIN |
 | `https://addressesapi.090227.xyz/CloudFlareYes` | 15 | CM/CU/CT combined |
@@ -53,6 +52,7 @@ https://bestcf.pages.dev/cmliu/all.txt
 | `https://bestcf.pages.dev/domain/ygkkk/all.txt`, `/domain/qms/all.txt` | 2 each | Yonge/Qiushan domain-relay picks |
 | `https://ip.164746.xyz/ipTop10.html` | 10 | Daily Top10 (comma-separated) |
 
+> WARNING: `ipdb.api.030101.xyz/?type=bestproxy&country=true` is country-tagged with wide coverage, but it is a **PROXYIP pool for ED relaying - not Cloudflare edge IPs**. Adding it as a preferred source injects fake candidates (latency but no bandwidth/region, unusable in subscriptions).
 > To land specific regions (Singapore/Japan/Hong Kong/US): sources only provide the candidate pool — enable **Region targeting** with the desired colos (SIN/NRT/HKG/LAX/SJC…). US nodes are usually 150ms+; relax the latency cap accordingly.
 
 ## Region targeting
