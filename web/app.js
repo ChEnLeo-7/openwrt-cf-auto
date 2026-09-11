@@ -441,6 +441,7 @@ $("btn-add-colo").onclick = () => {
 /* ================= 配置 ================= */
 function fillConfig(c) {
   document.querySelectorAll("#seg-method button").forEach(b => b.classList.toggle("on", b.dataset.v === c.method));
+  updateMethodHint();
   document.querySelectorAll("#seg-source button").forEach(b => b.classList.toggle("on", b.dataset.v === c.source_mode));
   applyMethodVisibility(c.method);
   document.querySelectorAll("#seg-resultmode button").forEach(b => b.classList.toggle("on", (c.result_mode || "overwrite") === b.dataset.v));
