@@ -30,6 +30,7 @@ type CfstCfg struct {
 	DT        int    `json:"dt"`
 	URL       string `json:"url"`
 	ExtraArgs string `json:"extra_args"`
+	HTTPing   bool   `json:"httping"`
 }
 
 type GistCfg struct {

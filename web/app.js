@@ -21,6 +21,7 @@ const I18N = {
     "rmode.overwrite":"覆盖更新","rmode.merge":"融合更新","rmode.hint.overwrite":"每轮把最新结果整理成独立 txt 直接覆盖整个文件 — 节点池完全跟随最新实测。","rmode.hint.merge":"新结果与旧榜融合：老 IP 仍达标则保留靠后，连续落榜才淘汰 — 节点池平滑演进。",
     "cfg.tag_h":"节点信息模板","cfg.tag_sub":"# 后显示内容","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"变量：{region} 地区代码 · {latency} 延迟 · {speed} 带宽（自带 MB/s）· {date} 日期。空段自动省略。",
     "cfg.params_h":"CloudflareSpeedTest 参数","cfg.tl":"平均延迟上限 -tl (ms)","cfg.tll":"平均延迟下限 -tll (ms)","cfg.dn":"下载测速数量 -dn","cfg.dt":"单 IP 测速时长 -dt (秒)","cfg.url":"下载测速地址","cfg.extra":"高级附加参数","cfg.extra_ph":"原样追加，如 -t 200",
+    "cfg.httping":"HTTP 模式测速（-httping）","cfg.httping_hint":"用 HTTP 请求代替 TCP 连接测延迟。若你的路由器 TCP 直连 Cloudflare 全部超时（表现为 0 达标），请打开此开关。",
     "cfg.sched_h":"定时更新","cfg.sched_en":"自动优选并更新 Gist","cfg.sched_int":"更新间隔（小时）","cfg.sched_hint":"到点按当前优选方式、来源、地区和端口执行完整一轮。","cfg.appupdate_h":"程序更新","cfg.appupdate_hint":"打开面板时自动检测一次更新，发现新版本会弹出双语 Release 说明。","cfg.save":"保存设置",
     "gist.h":"Gist 自动上传","gist.token":"GitHub Token","gist.token_ph":"ghp_ 开头经典 Token（留空表示不修改）","gist.token_saved_ph":"已保存（留空 = 不修改）","gist.id":"Gist ID","gist.file":"目标文件名","gist.proxy":"GitHub 代理（可选）","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"保存","gist.verify":"验证连接",
     "tut.title":"如何获取 GitHub Token（三步）","tut.s1":"登录 GitHub → 头像 → Settings。","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)。","tut.s3":"选择有效期，只勾选 gist，生成后复制 ghp_ 开头的 Token。","tut.gistid":"Gist ID 位于 gist 页面 URL：gist.github.com/用户名/ID。",
@@ -43,6 +44,7 @@ const I18N = {
     "rmode.overwrite":"Overwrite","rmode.merge":"Merge","rmode.hint.overwrite":"Each run rebuilds a fresh file from the latest results and overwrites the board — the pool always mirrors the newest test.","rmode.hint.merge":"New results merge with the previous board: qualified old IPs stay behind the new ones and are evicted only after repeated misses — smooth evolution.",
     "cfg.tag_h":"Node label template","cfg.tag_sub":"text after #","cfg.tag_ph":"cf-auto | {region} | {latency}ms | {speed}","cfg.tag_hint":"Variables: {region}, {latency}, {speed} (includes MB/s), and {date}. Empty segments are removed.",
     "cfg.params_h":"CloudflareSpeedTest parameters","cfg.tl":"Maximum average latency -tl (ms)","cfg.tll":"Minimum average latency -tll (ms)","cfg.dn":"Download test count -dn","cfg.dt":"Test duration per IP -dt (seconds)","cfg.url":"Download test URL","cfg.extra":"Advanced extra arguments","cfg.extra_ph":"Passed through as-is, e.g. -t 200",
+    "cfg.httping":"HTTP-mode latency test (-httping)","cfg.httping_hint":"Measures latency with HTTP requests instead of TCP connects. Enable this if direct TCP connections to Cloudflare all time out on your router (shown as 0 qualified).",
     "cfg.sched_h":"Scheduled update","cfg.sched_en":"Automatically optimize and update Gist","cfg.sched_int":"Update interval (hours)","cfg.sched_hint":"Runs a full optimization using the current method, source, regions, and ports.","cfg.appupdate_h":"Application updates","cfg.appupdate_hint":"Checks for updates automatically each time the panel opens; a bilingual notes dialog appears when a new version is found.","cfg.save":"Save settings",
     "gist.h":"Automatic Gist upload","gist.token":"GitHub token","gist.token_ph":"Classic ghp_ token (leave blank to keep current)","gist.token_saved_ph":"Saved (leave blank to keep it)","gist.id":"Gist ID","gist.file":"Target filename","gist.proxy":"GitHub proxy (optional)","gist.proxy_ph":"http://127.0.0.1:7890","gist.save":"Save","gist.verify":"Verify connection",
     "tut.title":"Get a GitHub token in three steps","tut.s1":"Sign in to GitHub → avatar → Settings.","tut.s2":"Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic).","tut.s3":"Choose an expiration, select only gist, generate it, and copy the ghp_ token.","tut.gistid":"The Gist ID is in the URL: gist.github.com/username/ID.",
@@ -194,6 +196,9 @@ const LOG_EN = [
   [/\[引擎\] 端口 (\d+) 模式 (\S+) 启动 cfst/g, "[Engine] port $1 mode $2 starting cfst"],
   [/端口 (\d+) 解析到 (\d+) 条有效结果/g, "port $1 parsed $2 valid results"],
   [/\[引擎\] 端口 (\d+) 机房 (\S+) 测速失败/g, "[Engine] port $1 colo $2 test failed"],
+  [/\[区域\] 端口 (\d+) 机房 (\S+) 本轮 0 达标（本线路可能不路由到 \S+），跳过/g, "[Region] port $1 colo $2: 0 qualified this round (this line may not route to $3); skipped"],
+  [/\[区域\] 端口 (\d+) 本轮 0 达标（阈值过严或线路不通），跳过/g, "[Region] port $1: 0 qualified this round (thresholds too strict or line blocked); skipped"],
+  [/本轮 0 达标/g, "0 qualified this round"],
   [/测速超时被终止/g, "test aborted by timeout"],
   [/cfst 退出异常/g, "cfst exited abnormally"],
   [/打开结果 CSV 失败/g, "failed to open result CSV"],
@@ -395,6 +400,7 @@ function fillConfig(c) {
   $("cfg-cf-dn").value = c.cfst.dn;
   $("cfg-cf-dt").value = c.cfst.dt;
   $("cfg-cf-url").value = c.cfst.url;
+  $("cfg-cf-httping").checked = !!c.cfst.httping;
   $("cfg-cf-extra").value = c.cfst.extra_args || "";
   tokenSaved = !!c.token_set;
   $("cfg-g-token").placeholder = tokenSaved ? t("gist.token_saved_ph") : t("gist.token_ph");
@@ -425,7 +431,7 @@ function collectCfg() {
     cfst: {
       tl: +$("cfg-cf-tl").value, tll: +$("cfg-cf-tll").value,
       dn: +$("cfg-cf-dn").value, dt: +$("cfg-cf-dt").value,
-      url: $("cfg-cf-url").value.trim(), extra_args: $("cfg-cf-extra").value.trim()
+      url: $("cfg-cf-url").value.trim(), httping: $("cfg-cf-httping").checked, extra_args: $("cfg-cf-extra").value.trim()
     },
     gist: {
       token: $("cfg-g-token").value.trim(),

@@ -8,7 +8,7 @@
 
 [简体中文](README.md) | **English**
 
-[![version](https://img.shields.io/badge/version-0.2.2-4f8cff)](#installation)
+[![version](https://img.shields.io/badge/version-0.2.4-4f8cff)](#installation)
 [![platform](https://img.shields.io/badge/platform-OpenWrt%2023.05%2B-00b3a4)](#installation)
 [![arch](https://img.shields.io/badge/arch-x86_64%20%7C%20aarch64-8a63ff)](#installation)
 [![engine](https://img.shields.io/badge/engine-CloudflareSpeedTest%20v2.3.5-ffb454)](#engine)
@@ -47,8 +47,8 @@ The complete selection process runs on your own connection, so the measured late
 ## Installation
 
 ```sh
-opkg install cf-auto_0.2.2_x86_64.ipk    # x86_64 router
-opkg install cf-auto_0.2.2_aarch64.ipk   # ARM64 device, such as an N1
+opkg install cf-auto_0.2.4_x86_64.ipk    # x86_64 router
+opkg install cf-auto_0.2.4_aarch64.ipk   # ARM64 device, such as an N1
 ```
 
 Installation registers and enables the procd service. Open the panel at `http://ROUTER_IP:7800`.
@@ -119,7 +119,7 @@ The updater selects the x86_64 or aarch64 asset automatically. Configuration and
 ## Build
 
 ```powershell
-.\build.ps1 -Version 0.2.2    # Download the engine and cross-compile both IPK architectures
+.\build.ps1 -Version 0.2.4    # Download the engine and cross-compile both IPK architectures
 ```
 
 ## License

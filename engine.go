@@ -104,6 +104,8 @@ func fetchOfficialRanges() ([]string, error) {
 	return strings.Fields(string(b)), nil
 }
 
+var errNoQualified = errors.New("本轮 0 达标")
+
 func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile, workDir string) ([]ResultRow, error) {
 	csvFile := filepath.Join(workDir, fmt.Sprintf("result_%d_%s.csv", port, sanitize(region)))
 	_ = os.Remove(csvFile)
@@ -119,8 +121,11 @@ func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile
 	if cfg.Cfst.TL > 0 {
 		args = append(args, "-tl", strconv.Itoa(cfg.Cfst.TL))
 	}
+	if region != "" || cfg.Cfst.HTTPing {
+		args = append(args, "-httping")
+	}
 	if region != "" {
-		args = append(args, "-httping", "-cfcolo", region)
+		args = append(args, "-cfcolo", region)
 	}
 	if cfg.Method == "bandwidth" {
 		args = append(args, "-url", cfg.Cfst.URL, "-dn", strconv.Itoa(cfg.Cfst.DN), "-dt", strconv.Itoa(cfg.Cfst.DT))
@@ -170,6 +175,9 @@ func sanitize(s string) string {
 func parseCfstCSV(path string, port int, region string) ([]ResultRow, error) {
 	f, err := os.Open(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, errNoQualified // cfst 在 0 达标时不会写出结果文件
+		}
 		return nil, fmt.Errorf("打开结果 CSV 失败: %v", err)
 	}
 	defer f.Close()
@@ -248,7 +256,15 @@ func RunOnce(cfg *Config) error {
 			rows, err := runCfst(ctx, cfg, port, region, listFile, workDir)
 			cancel()
 			if err != nil {
-				Log.Addf("[引擎] 端口 %d 机房 %s 测速失败: %v", port, region, err)
+				if errors.Is(err, errNoQualified) {
+					if region != "" {
+						Log.Addf("[区域] 端口 %d 机房 %s 本轮 0 达标（本线路可能不路由到 %s），跳过", port, region, region)
+					} else {
+						Log.Addf("[区域] 端口 %d 本轮 0 达标（阈值过严或线路不通），跳过", port)
+					}
+				} else {
+					Log.Addf("[引擎] 端口 %d 机房 %s 测速失败: %v", port, region, err)
+				}
 				continue
 			}
 			allRows = append(allRows, rows...)
