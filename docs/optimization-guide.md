@@ -8,10 +8,10 @@
 
 | 标签页 | 作用 |
 |---|---|
-| 概览 | 显示程序版本、引擎版本、定时状态、Gist 状态；「开始优选」手动跑一轮；查看最近结果表；引擎升级入口 |
+| 概览 | 显示程序版本、引擎版本、定时状态、Gist 状态；「开始优选」手动跑一轮（运行中可「停止优选」随时终止）；查看最近结果表；引擎升级入口 |
 | 优选设置 | 优选方式、来源、区域、端口、参数、结果策略、定时更新等核心配置 |
-| GitHub | 填写 Token / Gist ID / 目标文件名 / 代理，验证连接 |
-| 日志 | 实时滚动日志，可开启自动刷新 |
+| GitHub | 填写 Token / Gist ID / 目标文件名 / 代理，验证连接；可开关「优选完成后自动上传」 |
+| 日志 | 实时滚动日志，可开启自动刷新；支持复制、导出 txt、清空 |
 
 ## 优选方式
 
@@ -35,6 +35,25 @@ https://bestcf.pages.dev/cmliu/all.txt
 ```
 
 **CF 官方网段**：实时从 `api.cloudflare.com` 拉取 Cloudflare 官方 IPv4 网段（与 CloudflareSpeedTest 默认行为一致），覆盖最全但单轮耗时更长（数十分钟）。适合低频深度扫描，或自定义源长期失效时的兜底。
+
+**社区精选库**：从 `cmliu/CF-CIDR` 社区实测库按运营商拉取精选网段（电信 5 段、通用 25 段等），候选少、单轮 2~3 分钟、命中率高，但覆盖不全——建议与官方网段互补使用。运营商可自动检测（百度 qifu 直连查询，失败自动回退 cip.cc）或手动指定；内置快照兜底，配置了 GitHub 代理时拉取失败还会自动回退直连。
+
+**自定义优选源·推荐清单（2026-09 实测直连可用）**：
+
+| 源 | 条数 | 说明 / 地区 |
+|---|---|---|
+| `https://ipdb.api.030101.xyz/?type=bestproxy&country=true` | 108 | 🌍 地区最全：SG 22 / NL 19 / GB 15 / KR 13 / JP 11 / HK 7 / US 6 等，自带国家标注 |
+| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | 全球扫段 Top100（US 为主 + JP），自动更新 |
+| `https://cdn.jsdelivr.net/gh/joname1/BestCFip@main/ipv4.txt` | 96 | 自动采集，US 为主，带地区标注 |
+| `https://bestcf.pages.dev/cmliu/all.txt` | 34 | CMLiussss 优选，多为 SIN |
+| `https://addressesapi.090227.xyz/CloudFlareYes` | 15 | CM/CU/CT 三网综合 |
+| `https://cf.090227.xyz/ct` / `cu` / `cmcc` | 各 4 | 分运营商精选（CF 电信/联通/移动优选） |
+| `https://ipdb.api.030101.xyz/?type=bestcfv4` | 10 | 030101 IPDB 优选 IPv4 |
+| `https://cdn.jsdelivr.net/gh/ymyuuu/IPDB@main/BestCF/bestcfv4.txt` | 10 | ymyuuu IPDB 优选 IPv4 |
+| `https://bestcf.pages.dev/domain/ygkkk/all.txt`、`/domain/qms/all.txt` | 各 2 | 甬哥/秋名山域名反代优选 |
+| `https://ip.164746.xyz/ipTop10.html` | 10 | 每日 Top10（逗号分隔格式） |
+
+> 想要特定地区上榜（新加坡/日本/香港/美国等）：来源只决定候选池，配合「区域定向」勾选目标机房（SIN/NRT/HKG/LAX/SJC…）即可精确筛选；美国节点普遍 150ms+，需适当放宽平均延迟上限。
 
 ## 区域定向
 
@@ -118,6 +137,8 @@ https://bestcf.pages.dev/cmliu/all.txt
 4. GitHub 代理：路由器 GitHub API 直连不通时填（例如本机 OpenClash 混合端口 `http://127.0.0.1:7890`）
 5. 点「验证连接」，通过后保存
 
+「优选完成后自动上传」开关控制每轮测速结束后是否自动推送 Gist；关闭后结果仅存本地，随时可在概览页点「重传结果」手动上传。
+
 ### 第三步：跑第一轮
 
 进入「优选设置」按上文选好方式/来源/端口并保存，再到「概览」点「开始优选」。日志中可观察：候选池拉取 → 逐地区测速 → 合并筛选 → Gist 上传。
@@ -139,6 +160,9 @@ GitHub 对 raw 内容有约 1 小时缓存，订阅侧延迟生效属正常。
 
 **日志提示「本线路可能不路由到 XX 机房」？**
 你的线路当前出口机房不是 XX。Cloudflare 出口由运营商路由决定且会变化，取消该地区勾选即可；该提示只是跳过警告，不影响其他地区。
+
+**结果表「地区」显示 —？**
+未开区域定向时，cf-auto 会通过 `cdn-cgi/trace` 自动补全上榜 IP 的落地机房；若当前线路对 Cloudflare 的 TLS 受干扰（常见于深夜），补全会失败并留空，窗口恢复后下一轮自动补上，日志中会有对应提示。
 
 **融合与覆盖怎么选？**
 追求简单直接用默认的覆盖更新；希望订阅里的 IP 池缓慢变化、减少单轮波动影响，用融合更新。

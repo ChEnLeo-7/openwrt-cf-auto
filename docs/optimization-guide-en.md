@@ -8,10 +8,10 @@ The panel runs at `http://ROUTER_IP:7800` and has four tabs:
 
 | Tab | Purpose |
 |---|---|
-| Overview | App version, engine version, schedule status, Gist status; the **Start optimization** button; the latest result table; engine update entry |
+| Overview | App version, engine version, schedule status, Gist status; **Start optimization** (with **Stop** while running); the latest result table; engine update entry |
 | Optimization | Core settings: method, source, regions, ports, parameters, result policy, scheduling |
-| GitHub | Token / Gist ID / target filename / proxy, plus connection verification |
-| Logs | Live rolling log with an auto-refresh toggle |
+| GitHub | Token / Gist ID / target filename / proxy, connection verification, and the auto-upload toggle |
+| Logs | Live rolling log with auto-refresh; supports copy, export to txt, and clear |
 
 ## Selection method
 
@@ -35,6 +35,25 @@ https://bestcf.pages.dev/cmliu/all.txt
 ```
 
 **Official Cloudflare ranges**: fetches Cloudflare's official IPv4 ranges live from `api.cloudflare.com` (matching CloudflareSpeedTest's default behavior). The most complete coverage but each run takes tens of minutes — best for infrequent deep scans or as a fallback when custom sources die.
+
+**Community curated library**: pulls ISP-specific curated ranges from the `cmliu/CF-CIDR` community library (Telecom 5 ranges, general 25 ranges, etc.). Few candidates, 2-3 minute runs, high hit-rate, but incomplete coverage — best paired with official ranges. The ISP is auto-detected (direct Baidu qifu query with cip.cc fallback) or selected manually; embedded snapshots act as a fallback, and a configured GitHub proxy is used with automatic direct-connection retry.
+
+**Custom preferred-IP URLs — recommended list (verified reachable, 2026-09)**:
+
+| Source | Lines | Description / regions |
+|---|---|---|
+| `https://ipdb.api.030101.xyz/?type=bestproxy&country=true` | 108 | 🌍 Best coverage: SG 22 / NL 19 / GB 15 / KR 13 / JP 11 / HK 7 / US 6, country-tagged |
+| `https://cdn.jsdelivr.net/gh/LancelotRar/best-cf-ips@main/best-cf-ip-scanned-top100.txt` | 100 | Global scan Top100 (mostly US + JP), auto-updated |
+| `https://cdn.jsdelivr.net/gh/joname1/BestCFip@main/ipv4.txt` | 96 | Auto-collected, mostly US, region-tagged |
+| `https://bestcf.pages.dev/cmliu/all.txt` | 34 | CMLiussss picks, mostly SIN |
+| `https://addressesapi.090227.xyz/CloudFlareYes` | 15 | CM/CU/CT combined |
+| `https://cf.090227.xyz/ct` / `cu` / `cmcc` | 4 each | Per-ISP curated (CF Telecom/Unicom/CMCC picks) |
+| `https://ipdb.api.030101.xyz/?type=bestcfv4` | 10 | 030101 IPDB preferred IPv4 |
+| `https://cdn.jsdelivr.net/gh/ymyuuu/IPDB@main/BestCF/bestcfv4.txt` | 10 | ymyuuu IPDB preferred IPv4 |
+| `https://bestcf.pages.dev/domain/ygkkk/all.txt`, `/domain/qms/all.txt` | 2 each | Yonge/Qiushan domain-relay picks |
+| `https://ip.164746.xyz/ipTop10.html` | 10 | Daily Top10 (comma-separated) |
+
+> To land specific regions (Singapore/Japan/Hong Kong/US): sources only provide the candidate pool — enable **Region targeting** with the desired colos (SIN/NRT/HKG/LAX/SJC…). US nodes are usually 150ms+; relax the latency cap accordingly.
 
 ## Region targeting
 
@@ -118,6 +137,8 @@ Open the **GitHub** tab:
 4. GitHub proxy: fill this in if the router cannot reach the GitHub API directly (for example the local OpenClash mixed port `http://127.0.0.1:7890`)
 5. Click **Verify connection**, then save
 
+The **Auto-upload to Gist after each run** toggle controls whether results are pushed automatically; when off, results stay local and can be pushed anytime via **Re-upload** on the Overview page.
+
 ### Step 3: run the first round
 
 Pick the method, source, and ports under **Selection settings**, save, then click **Start optimization** under **Overview**. The log shows: candidate pool fetch -> per-region testing -> merge and filter -> Gist upload.
@@ -139,6 +160,9 @@ Check in order: did the source fetch succeed (candidate pool line in the log) ->
 
 **The log says "this line may not route to XX"?**
 Your line's current egress colo is not XX. Cloudflare egress is decided by provider routing and changes over time — deselect that region. The message is only a skip warning and does not affect other regions.
+
+**The region column shows "—"?**
+Without region targeting, cf-auto enriches listed IPs via `cdn-cgi/trace`; if the line's TLS to Cloudflare is being interfered with (common late at night), enrichment fails and regions stay blank. The next run in an open window fills them automatically — the log says so explicitly.
 
 **Merge or overwrite?**
 Keep the default overwrite for simplicity; choose merge if you want the pool to evolve gradually and single-run variance to matter less.

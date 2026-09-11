@@ -32,7 +32,9 @@ The complete selection process runs on your own connection, so the measured late
 ## Features
 
 - ⚡ **Two selection methods**: latency mode uses a zero-traffic TCP scan; bandwidth mode downloads through top candidates to measure real throughput.
-- 🌐 **Two candidate sources**: use custom source URLs for community preselection plus local verification, or scan official Cloudflare ranges fetched from `api.cloudflare.com`.
+- 🌐 **Three candidate sources**: custom source URLs (community preselection plus local verification), official Cloudflare ranges fetched live from `api.cloudflare.com`, or the community curated library (ISP-specific ranges from cmliu/CF-CIDR for fast two-minute runs).
+- 🛑 **One-click stop**: cancel a running optimization from the Overview page at any time — accidental clicks are harmless and nothing is saved.
+- 🌏 **Automatic region enrichment**: even without region targeting, each listed IP's real landing colo is resolved via `cdn-cgi/trace`.
 - 📍 **Region targeting**: filter by the actual Cloudflare colo using HTTPING and `-cfcolo` (SIN, NRT, KIX, HKG, and more), with a configurable minimum per region.
 - 🏷️ **Colo explanations**: common Cloudflare colo codes have localized labels such as `SIN | Singapore`; custom `CODE|Name` entries are supported and persisted.
 - 🔄 **Two update modes**: overwrite (each run rebuilds the board from the latest results) or merge (merge-and-decay for a smoothly evolving pool).
