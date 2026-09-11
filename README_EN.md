@@ -31,18 +31,20 @@ The complete selection process runs on your own connection, so the measured late
 
 ## Features
 
-- **Two selection methods**: latency mode uses a zero-traffic TCP scan; bandwidth mode downloads through top candidates to measure real throughput.
-- **Two candidate sources**: use custom source URLs for community preselection plus local verification, or scan official Cloudflare ranges fetched from `api.cloudflare.com`.
-- **Region targeting**: filter by the actual Cloudflare colo using HTTPING and `-cfcolo` (SIN, NRT, KIX, HKG, and more), with a configurable minimum per region.
-- **Colo explanations**: common Cloudflare colo codes have localized labels such as `SIN | Singapore`; custom `CODE|Name` entries are supported and persisted.
-- **Merge and decay**: new winners move to the front, qualified existing IPs remain behind them, and stale entries are removed only after repeated misses.
-- **Scheduled updates**: run selection and upload automatically at a configurable interval.
-- **Custom node labels**: compose comments after `#` with region, latency, bandwidth, and date variables.
-- **Light and dark themes**: an Apple-inspired web panel available on your LAN at port `7800`, with automatic or manual theme switching.
-- **Chinese and English UI**: the panel uses translation keys throughout and switches languages instantly without a reload.
-- **Application updates**: checks GitHub Release tags automatically each time the panel opens, presents bilingual notes in a dialog, and supports one-click or automatic IPK installation.
-- **One-click engine updates**: check and update CloudflareSpeedTest from the panel with automatic backup and rollback.
-- **One-command IPK installation**: packages for x86_64 and aarch64 with procd autostart.
+- ⚡ **Two selection methods**: latency mode uses a zero-traffic TCP scan; bandwidth mode downloads through top candidates to measure real throughput.
+- 🌐 **Two candidate sources**: use custom source URLs for community preselection plus local verification, or scan official Cloudflare ranges fetched from `api.cloudflare.com`.
+- 📍 **Region targeting**: filter by the actual Cloudflare colo using HTTPING and `-cfcolo` (SIN, NRT, KIX, HKG, and more), with a configurable minimum per region.
+- 🏷️ **Colo explanations**: common Cloudflare colo codes have localized labels such as `SIN | Singapore`; custom `CODE|Name` entries are supported and persisted.
+- 🔄 **Two update modes**: overwrite (each run rebuilds the board from the latest results) or merge (merge-and-decay for a smoothly evolving pool).
+- 🧪 **HTTP-mode latency test**: lines where direct TCP connections to Cloudflare all time out can switch to HTTPING with one toggle.
+- ⏰ **Scheduled updates**: run selection and upload automatically at a configurable interval.
+- ✏️ **Custom node labels**: compose comments after `#` with region, latency, bandwidth, and date variables.
+- 🌗 **Light and dark themes**: an Apple-inspired web panel available on your LAN at port `7800`, with automatic or manual theme switching.
+- 🌍 **Chinese and English UI**: the panel uses translation keys throughout and switches languages instantly without a reload.
+- 🔧 **One-click engine updates**: check and update CloudflareSpeedTest from the panel with automatic backup and rollback.
+- 📦 **One-command IPK installation**: packages for x86_64 and aarch64 with procd autostart.
+
+> For a detailed explanation of every option, the full setup walkthrough, and troubleshooting, see the [Selection Settings & User Guide](docs/optimization-guide-en.md).
 
 ## Installation
 
@@ -67,6 +69,8 @@ Installation registers and enables the procd service. Open the panel at `http://
    ```text
    https://gist.githubusercontent.com/<user>/<GistID>/raw/CF-Auto-Top.txt
    ```
+
+For a complete step-by-step walkthrough, see the [Selection Settings & User Guide](docs/optimization-guide-en.md).
 
 ## Create a GitHub token
 
@@ -95,19 +99,13 @@ Example result template: `cf-auto | {region} | {latency}ms | {speed}`. Variables
 
 ## Result update strategy
 
-cf-auto uses merge-and-decay rather than replacing the entire file after each run. New winners are placed first, existing IPs that still qualify are retained behind them, and an entry is removed only after missing a configurable number of consecutive runs (three by default). With region targeting enabled, every selected region retains a minimum number of entries. The output header contains only the application version and update time; the decay ledger remains locally in `state.json`.
+Two update modes can be switched in the panel: **Overwrite** (default) rebuilds a fresh file from the latest results and replaces the whole board, so the pool always mirrors the newest test; **Merge** places new winners in front, retains qualified existing IPs behind them, and removes an entry only after a configurable number of consecutive misses (three by default), letting the pool evolve smoothly. With region targeting enabled, every selected region retains a minimum number of entries. The output header contains only the application version and update time; the merge-mode ledger remains locally in `state.json`.
 
 ## Engine
 
 The test engine is [XIU2/CloudflareSpeedTest](https://github.com/XIU2/CloudflareSpeedTest) v2.3.5 under GPL-3.0. It is bundled and invoked as a separate binary without source modifications. Its license is installed at `/usr/share/doc/cf-auto/CFST-LICENSE`.
 
 On the first build, `build.ps1` downloads the matching engine binaries from GitHub Releases.
-
-## Application updates
-
-The panel checks the latest GitHub Release from `ChEnLeo-7/openwrt-cf-auto` every time it opens. When a newer tag is available, a dialog shows the Release title, bilingual notes, and update actions. You can open the Release page, install the matching IPK immediately, or enable automatic installation under **Optimization → Application updates** (the matching IPK is then downloaded and installed automatically on detection).
-
-The updater selects the x86_64 or aarch64 asset automatically. Configuration and selection state are kept outside the package payload and survive the upgrade.
 
 ## Notes
 
@@ -125,3 +123,13 @@ The updater selects the x86_64 or aarch64 asset automatically. Configuration and
 ## License
 
 This project is released under the [MIT License](LICENSE). The bundled CloudflareSpeedTest engine remains subject to GPL-3.0.
+
+## Acknowledgements
+
+| Library | Description |
+|---|---|
+| [XIU2/CloudflareSpeedTest](https://github.com/XIU2/CloudflareSpeedTest) | Cloudflare preferred-IP testing engine (GPL-3.0) |
+| [Cloudflare](https://www.cloudflare.com/) | Official range data and speed-test endpoints |
+| [OpenWrt](https://openwrt.org/) | IPK packaging and procd service conventions |
+
+> Thanks to the authors and community contributors of the projects above.
