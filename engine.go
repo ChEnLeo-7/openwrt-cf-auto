@@ -223,7 +223,8 @@ func RunOnce(cfg *Config) error {
 	_ = os.MkdirAll(workDir, 0755)
 	listFile := filepath.Join(workDir, "ips.txt")
 
-	if cfg.SourceMode == "official" {
+	switch cfg.SourceMode {
+	case "official":
 		ranges, err := fetchOfficialRanges()
 		if err != nil {
 			return err
@@ -231,7 +232,18 @@ func RunOnce(cfg *Config) error {
 		if err := os.WriteFile(listFile, []byte(strings.Join(ranges, "\n")), 0644); err != nil {
 			return err
 		}
-	} else {
+	case "community":
+		_, ranges, err := fetchCommunityRanges(cfg)
+		if err != nil {
+			Log.Addf("[社区库] 获取失败（%v），回退 CF 官方网段", err)
+			if ranges, err = fetchOfficialRanges(); err != nil {
+				return err
+			}
+		}
+		if err := os.WriteFile(listFile, []byte(strings.Join(ranges, "\n")), 0644); err != nil {
+			return err
+		}
+	default:
 		if len(cfg.Sources) == 0 {
 			return errors.New("优选源列表为空，请先在面板配置（或切换为 CF 官方源模式）")
 		}

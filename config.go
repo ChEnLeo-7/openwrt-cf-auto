@@ -23,6 +23,11 @@ type AppUpdateCfg struct {
 	AutoInstall bool `json:"auto_install"`
 }
 
+type CommunityCfg struct {
+	ISP          string `json:"isp"`           // auto | ct | cu | cmcc | cf
+	RefreshHours int    `json:"refresh_hours"` // 网段库缓存时长
+}
+
 type CfstCfg struct {
 	TL        int    `json:"tl"`
 	TLL       int    `json:"tll"`
@@ -43,7 +48,7 @@ type GistCfg struct {
 type Config struct {
 	Listen      string      `json:"listen"`
 	Method      string      `json:"method"`       // latency | bandwidth
-	SourceMode  string      `json:"source_mode"`  // custom | official
+	SourceMode  string      `json:"source_mode"`  // custom | official | community
 	ResultMode  string      `json:"result_mode"`  // overwrite | merge
 	Sources     []string    `json:"sources"`
 	Ports       []int        `json:"ports"`
@@ -54,6 +59,7 @@ type Config struct {
 	TagTemplate string       `json:"tag_template"`
 	Schedule    ScheduleCfg  `json:"schedule"`
 	AppUpdate   AppUpdateCfg `json:"app_update"`
+	Community   CommunityCfg `json:"community"`
 	Cfst        CfstCfg      `json:"cfst"`
 	Gist        GistCfg      `json:"gist"`
 }
@@ -109,6 +115,7 @@ func defaultConfig() *Config {
 	}
 	c.Region = RegionCfg{Enabled: false, Colos: []string{"SIN"}, MinPerRegion: 3, Names: map[string]string{}}
 	c.Schedule = ScheduleCfg{Enabled: true, IntervalHours: 1}
+	c.Community = CommunityCfg{ISP: "auto", RefreshHours: 24}
 	c.AppUpdate = AppUpdateCfg{AutoInstall: false}
 	c.Cfst = CfstCfg{TL: 300, TLL: 0, DN: 10, DT: 8, URL: "https://speed.cloudflare.com/__down?bytes=25000000"}
 	c.Gist = GistCfg{Token: "", ID: "", Filename: "CF-Auto-Top.txt", ProxyURL: ""}
@@ -139,8 +146,16 @@ func (c *Config) normalize() {
 	if c.Method != "bandwidth" {
 		c.Method = "latency"
 	}
-	if c.SourceMode != "official" {
+	if c.SourceMode != "official" && c.SourceMode != "community" {
 		c.SourceMode = "custom"
+	}
+	switch c.Community.ISP {
+	case "ct", "cu", "cmcc", "cf":
+	default:
+		c.Community.ISP = "auto"
+	}
+	if c.Community.RefreshHours <= 0 {
+		c.Community.RefreshHours = 24
 	}
 	if c.ResultMode != "merge" {
 		c.ResultMode = "overwrite"

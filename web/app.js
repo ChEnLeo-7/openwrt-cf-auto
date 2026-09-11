@@ -15,7 +15,7 @@ const I18N = {
     "eng.current":"当前","eng.latest":"最新","eng.check":"检查更新","eng.update":"升级引擎","eng.autoupdate":"自动安装程序更新","eng.autoupdate_hint":"打开面板时自动检测一次，发现新版本弹出双语说明","app.check":"检查程序更新",
     "cfg.method_h":"优选方式","method.latency":"按延迟优选","method.bandwidth":"按带宽优选",
     "method.hint.latency":"对候选 IP 做 TCP 延迟测试，速度最快、几乎零流量。","method.hint.bandwidth":"对延迟达标的候选逐个下载测速，按带宽排序（会产生测速流量）。",
-    "cfg.source_h":"优选来源","source.custom":"自定义优选源","source.official":"CF 官方网段","source.ph":"每行一个优选 URL","source.hint":"拉取各来源后合并去重，再从你的线路进行二次优选。","source.official_note":"实时获取 Cloudflare 官方 IPv4 网段，与 CloudflareSpeedTest 默认方式一致。覆盖最全，但单轮耗时更长。",
+    "cfg.source_h":"优选来源","source.custom":"自定义优选源","source.official":"CF 官方网段","source.community":"社区精选库","source.ph":"每行一个优选 URL","source.hint":"拉取各来源后合并去重，再从你的线路进行二次优选。","source.official_note":"实时获取 Cloudflare 官方 IPv4 网段，与 CloudflareSpeedTest 默认方式一致。覆盖最全，但单轮耗时更长。","cfg.community_isp":"运营商","isp.auto":"自动检测","isp.ct":"电信","isp.cu":"联通","isp.cmcc":"移动","isp.cf":"通用","community.hint":"从 cmliu/CF-CIDR 社区实测库按运营商拉取精选网段，候选少、测速快、命中率高，但覆盖不全 — 建议与 CF 官方网段互补使用。",
     "cfg.region_h":"区域定向（真实落地机房）","cfg.region_en":"启用区域过滤","cfg.colo_ph":"输入代码，或 CODE|名称（如 SIN|新加坡）","cfg.add":"添加","cfg.region_hint":"可单选或多选；每个地区独立测速。按钮显示“代码 | 地区”解释，未知代码也可自定义名称。","cfg.min_region":"每地区最少上榜数",
     "cfg.ports_h":"测速端口","cfg.port_ph":"自定义端口","cfg.policy_h":"结果策略","cfg.topn":"本轮 TopN","cfg.maxlines":"结果行数上限","cfg.miss":"连续落榜淘汰轮数",
     "rmode.overwrite":"覆盖更新","rmode.merge":"融合更新","rmode.hint.overwrite":"每轮把最新结果整理成独立 txt 直接覆盖整个文件 — 节点池完全跟随最新实测。","rmode.hint.merge":"新结果与旧榜融合：老 IP 仍达标则保留靠后，连续落榜才淘汰 — 节点池平滑演进。",
@@ -39,7 +39,7 @@ const I18N = {
     "eng.current":"Current","eng.latest":"Latest","eng.check":"Check","eng.update":"Update engine","eng.autoupdate":"Auto-install app updates","eng.autoupdate_hint":"Checks once when the panel opens; shows a dialog if a new version is found.","app.check":"Check app update",
     "cfg.method_h":"Optimization method","method.latency":"Optimize for latency","method.bandwidth":"Optimize for bandwidth",
     "method.hint.latency":"Runs TCP latency tests against candidate IPs. Fast and nearly traffic-free.","method.hint.bandwidth":"Downloads a test file through qualified candidates and ranks them by throughput.",
-    "cfg.source_h":"Candidate source","source.custom":"Custom preferred-IP URLs","source.official":"Official CF ranges","source.ph":"One preferred-IP URL per line","source.hint":"Fetch, merge, and deduplicate public candidates, then re-test them from your own network.","source.official_note":"Fetches current Cloudflare IPv4 ranges, matching CloudflareSpeedTest's default workflow. Complete but slower.",
+    "cfg.source_h":"Candidate source","source.custom":"Custom preferred-IP URLs","source.official":"Official CF ranges","source.community":"Community ranges","source.ph":"One preferred-IP URL per line","source.hint":"Fetch, merge, and deduplicate public candidates, then re-test them from your own network.","source.official_note":"Fetches current Cloudflare IPv4 ranges, matching CloudflareSpeedTest's default workflow. Complete but slower.","cfg.community_isp":"ISP","isp.auto":"Auto-detect","isp.ct":"Telecom","isp.cu":"Unicom","isp.cmcc":"CMCC","isp.cf":"General","community.hint":"Pulls ISP-specific curated ranges from the cmliu/CF-CIDR community library. Small, fast, high hit-rate, but incomplete coverage — a good complement to official CF ranges.",
     "cfg.region_h":"Region targeting (real edge colo)","cfg.region_en":"Enable region filtering","cfg.colo_ph":"Enter CODE or CODE|Name, e.g. SIN|Singapore","cfg.add":"Add","cfg.region_hint":"Select one or more colos; each is tested separately. Buttons show “code | location”; unknown codes may have custom names.","cfg.min_region":"Minimum results per region",
     "cfg.ports_h":"Test ports","cfg.port_ph":"Custom port","cfg.policy_h":"Result policy","cfg.topn":"Top N this run","cfg.maxlines":"Maximum result lines","cfg.miss":"Misses before eviction",
     "rmode.overwrite":"Overwrite","rmode.merge":"Merge","rmode.hint.overwrite":"Each run rebuilds a fresh file from the latest results and overwrites the board — the pool always mirrors the newest test.","rmode.hint.merge":"New results merge with the previous board: qualified old IPs stay behind the new ones and are evicted only after repeated misses — smooth evolution.",
@@ -259,6 +259,14 @@ const LOG_EN = [
   [/下载失败/g, "download failed"],
   [/拉取失败/g, "fetch failed"],
   [/\[候选池\]/g, "[Pool]"],
+  [/\[社区库\] 运营商检测: (\S+) \((\w+)\)/g, "[Community] ISP detected: $2 ($1)"],
+  [/\[社区库\] 运营商检测失败，使用通用库 \((\w+)\)/g, "[Community] ISP detection failed, using general library ($1)"],
+  [/\[社区库\] 使用缓存网段（(\S+)，(\d+) 段）/g, "[Community] using cached ranges ($1, $2)"],
+  [/\[社区库\] 直连拉取失败，经代理成功/g, "[Community] direct fetch failed; succeeded via proxy"],
+  [/\[社区库\] 在线获取失败，使用内嵌快照/g, "[Community] online fetch failed, using embedded snapshot"],
+  [/\[社区库\] 运营商 (\S+) \((\w+)\) → 去重 (\d+) 段/g, "[Community] ISP $2 ($1): $3 deduped ranges"],
+  [/\[社区库\] 获取失败（.+?），回退 CF 官方网段/g, "[Community] fetch failed ($1), falling back to official CF ranges"],
+  [/\[社区库\]/g, "[Community]"],
   [/\[引擎\]/g, "[Engine]"],
   [/\[配置\]/g, "[Config]"],
   [/\[程序更新\]/g, "[App update]"],
@@ -375,7 +383,9 @@ bindSeg("seg-resultmode", updateResultmodeHint);
 bindSeg("seg-source", v => {
   $("src-custom").classList.toggle("hide", v !== "custom");
   $("src-official").classList.toggle("hide", v !== "official");
+  $("src-community").classList.toggle("hide", v !== "community");
 });
+bindSeg("seg-isp");
 
 /* ================= 端口 / 地区 chips ================= */
 function renderChips(boxId, list, selected, removable) {
@@ -448,6 +458,8 @@ function fillConfig(c) {
   updateResultmodeHint();
   $("src-custom").classList.toggle("hide", c.source_mode !== "custom");
   $("src-official").classList.toggle("hide", c.source_mode !== "official");
+  $("src-community").classList.toggle("hide", c.source_mode !== "community");
+  document.querySelectorAll("#seg-isp button").forEach(b => b.classList.toggle("on", b.dataset.v === ((c.community && c.community.isp) || "auto")));
   $("cfg-sources").value = (c.sources || []).join("\n");
   customPorts = (c.ports || []).filter(p => !COMMON_PORTS.includes(p));
   renderChips("cfg-ports", COMMON_PORTS, [...(c.ports || [])], true);
@@ -484,6 +496,7 @@ function collectCfg() {
     ports: $("cfg-ports")._selected || [],
     method: document.querySelector("#seg-method button.on").dataset.v,
     source_mode: document.querySelector("#seg-source button.on").dataset.v,
+    community: { isp: document.querySelector("#seg-isp button.on").dataset.v },
     result_mode: (document.querySelector("#seg-resultmode button.on") || {}).dataset.v || "overwrite",
     region: {
       enabled: $("cfg-region-en").checked,
