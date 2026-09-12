@@ -22,7 +22,7 @@ The panel runs at `http://ROUTER_IP:7800` and has four tabs:
 | Traffic | About zero | About 100-300 MB per run |
 | Best for | Routine refreshes on a schedule | High-bandwidth workloads such as 8K/IPTV |
 
-When you switch methods, the panel hides parameters that do not apply: **Download test count -dn**, **Test duration per IP -dt**, and **Download test URL** only appear in bandwidth mode.
+When you switch methods, the panel hides parameters that do not apply: **Download test count -dn**, **Test duration per IP -dt**, **Minimum download speed -sl**, and **Download test URL** only appear in bandwidth mode.
 
 ## Candidate source
 
@@ -79,6 +79,7 @@ The default is `443`. The panel offers `443 / 8443 / 2053 / 2083 / 2087 / 2096` 
 | Min average latency `-tll` | 0 | Filters suspiciously fast (possibly hijacked) IPs; keep at 0 normally |
 | Download test count `-dn` | 10 | Bandwidth mode: the top N latency-qualified IPs enter the download test |
 | Test duration per IP `-dt` | 8 s | Bandwidth mode: download seconds per IP — longer is more accurate and slower |
+| Minimum download speed `-sl` | 0 MB/s | Bandwidth mode: IPs below this speed are excluded; `0` disables the threshold, and `5` is a practical starting point |
 | Download test URL | speed.cloudflare.com | URL used for the download test |
 | HTTP-mode latency test | Off | Uses HTTP requests instead of TCP connects. **If the log shows the TCP mode timing out across the board (0 qualified), enable this** |
 | Advanced extra arguments | Empty | Appended to cfst as-is, e.g. `-t 200 -p 50` |

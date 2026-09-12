@@ -164,6 +164,9 @@ func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile
 	}
 	if cfg.Method == "bandwidth" {
 		args = append(args, "-url", cfg.Cfst.URL, "-dn", strconv.Itoa(cfg.Cfst.DN), "-dt", strconv.Itoa(cfg.Cfst.DT))
+		if cfg.Cfst.SL > 0 {
+			args = append(args, "-sl", strconv.FormatFloat(cfg.Cfst.SL, 'f', -1, 64))
+		}
 	} else {
 		args = append(args, "-dd")
 	}

@@ -29,13 +29,14 @@ type CommunityCfg struct {
 }
 
 type CfstCfg struct {
-	TL        int    `json:"tl"`
-	TLL       int    `json:"tll"`
-	DN        int    `json:"dn"`
-	DT        int    `json:"dt"`
-	URL       string `json:"url"`
-	ExtraArgs string `json:"extra_args"`
-	HTTPing   bool   `json:"httping"`
+	TL        int     `json:"tl"`
+	TLL       int     `json:"tll"`
+	DN        int     `json:"dn"`
+	DT        int     `json:"dt"`
+	URL       string  `json:"url"`
+	ExtraArgs string  `json:"extra_args"`
+	HTTPing   bool    `json:"httping"`
+	SL        float64 `json:"sl"` // 下载速度下限 MB/s，0 = 不限制
 }
 
 type GistCfg struct {
@@ -47,11 +48,11 @@ type GistCfg struct {
 }
 
 type Config struct {
-	Listen      string      `json:"listen"`
-	Method      string      `json:"method"`       // latency | bandwidth
-	SourceMode  string      `json:"source_mode"`  // custom | official | community
-	ResultMode  string      `json:"result_mode"`  // overwrite | merge
-	Sources     []string    `json:"sources"`
+	Listen      string       `json:"listen"`
+	Method      string       `json:"method"`      // latency | bandwidth
+	SourceMode  string       `json:"source_mode"` // custom | official | community
+	ResultMode  string       `json:"result_mode"` // overwrite | merge
+	Sources     []string     `json:"sources"`
 	Ports       []int        `json:"ports"`
 	TopN        int          `json:"top_n"`
 	MaxLines    int          `json:"max_lines"`
@@ -190,6 +191,9 @@ func (c *Config) normalize() {
 	}
 	if c.Cfst.TLL < 0 {
 		c.Cfst.TLL = 0
+	}
+	if c.Cfst.SL < 0 {
+		c.Cfst.SL = 0
 	}
 	if c.Cfst.DN <= 0 {
 		c.Cfst.DN = 10

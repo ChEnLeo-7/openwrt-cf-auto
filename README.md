@@ -10,7 +10,7 @@
 
 **简体中文** | [English](README_EN.md)
 
-[![version](https://img.shields.io/badge/version-0.3.1-4f8cff)](#-安装)
+[![version](https://img.shields.io/badge/version-0.3.2-4f8cff)](#-安装)
 [![platform](https://img.shields.io/badge/platform-OpenWrt%2023.05%2B-00b3a4)](#-安装)
 [![arch](https://img.shields.io/badge/arch-x86_64%20%7C%20aarch64-8a63ff)](#-安装)
 [![engine](https://img.shields.io/badge/engine-CloudflareSpeedTest%20v2.3.5-ffb454)](#引擎说明)
@@ -34,6 +34,7 @@ EdgeTunnel / WorkerVless2sub 类方案都依赖"优选 IP"，而市面上公开�
 ## 特性
 
 - ⚡ **两种优选方式**：按延迟（TCP 快扫，零流量）或按带宽（对 Top 候选逐个下载实测吞吐）
+- 🚦 **最低带宽门槛**：带宽模式支持 `-sl` 下载速度下限，低于门槛的节点不会上榜
 - 🌐 **三种优选来源**：自定义优选源 URL（社区初筛 + 本机终审）、CF 官方网段全扫（实时拉取 `api.cloudflare.com`），或社区精选库（按运营商拉取 cmliu/CF-CIDR 精选网段，小池快测两三分钟一轮）
 - 🛑 **一键停止**：优选进行中可随时在概览页终止，误点无忧、结果不落盘
 - 🌏 **地区自动补全**：未开区域定向时，也通过 `cdn-cgi/trace` 识别每个上榜 IP 的真实落地机房
@@ -53,8 +54,8 @@ EdgeTunnel / WorkerVless2sub 类方案都依赖"优选 IP"，而市面上公开�
 ## 安装
 
 ```sh
-opkg install cf-auto_0.3.1_x86_64.ipk    # x86_64 软路由
-opkg install cf-auto_0.3.1_aarch64.ipk   # ARM64 设备（N1 等）
+opkg install cf-auto_0.3.2_x86_64.ipk    # x86_64 软路由
+opkg install cf-auto_0.3.2_aarch64.ipk   # ARM64 设备（N1 等）
 ```
 
 安装即注册 procd 服务并开机自启，面板地址：`http://路由器IP:7800`
@@ -121,7 +122,7 @@ opkg install cf-auto_0.3.1_aarch64.ipk   # ARM64 设备（N1 等）
 ## 构建
 
 ```powershell
-.\build.ps1 -Version 0.3.1    # 自动下载引擎并交叉编译双架构 ipk
+.\build.ps1 -Version 0.3.2    # 自动下载引擎并交叉编译双架构 ipk
 ```
 
 ## 许可
