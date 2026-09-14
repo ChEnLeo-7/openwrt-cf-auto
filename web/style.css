@@ -253,7 +253,7 @@ footer { text-align: center; color: var(--txt3); font-size: 12px; padding: 18px;
 }
 @keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
 .modal-card {
-  width: 100%; max-width: 560px; max-height: 82vh; overflow: auto;
+  width: 100%; max-width: 560px; max-height: 86vh; overflow: auto;
   background: var(--surface-solid); border: 1px solid var(--hairline);
   border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 22px 24px;
   animation: sheet-in 280ms var(--spring);
@@ -262,8 +262,38 @@ footer { text-align: center; color: var(--txt3); font-size: 12px; padding: 18px;
 @media (prefers-reduced-motion: reduce) { .modal-card { animation: none; } .modal-scrim { animation: none; } }
 .modal-card h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
 .release-body {
-  font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-word;
+  font-size: 13.5px; line-height: 1.65; white-space: normal; word-break: break-word;
   background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--r-sm);
   padding: 12px 14px; max-height: 40vh; overflow: auto; color: var(--txt2);
 }
+.release-body > :first-child { margin-top: 0; }
+.release-body h1, .release-body h2, .release-body h3,
+.release-body h4, .release-body h5, .release-body h6 {
+  color: var(--txt); line-height: 1.3; margin: 16px 0 8px;
+}
+.release-body h1 { font-size: 18px; }
+.release-body h2 { font-size: 16px; }
+.release-body h3 { font-size: 15px; }
+.release-body p { margin: 0 0 12px; }
+.release-body ul, .release-body ol { margin: 0 0 12px 22px; }
+.release-body li + li { margin-top: 5px; }
+.release-body strong { color: var(--txt); }
 .release-body a { color: var(--accent); }
+.release-body code {
+  font-family: var(--mono); font-size: 0.92em; color: var(--txt);
+  background: var(--chip); border: 1px solid var(--hairline); border-radius: 4px; padding: 1px 5px;
+}
+.release-body pre {
+  margin: 0 0 12px; padding: 10px 12px; overflow: auto;
+  background: var(--surface-solid); border: 1px solid var(--hairline); border-radius: var(--r-sm);
+}
+.release-body pre code { padding: 0; border: 0; background: transparent; white-space: pre; }
+.release-body blockquote {
+  margin: 0 0 12px; padding-left: 12px; border-left: 3px solid var(--accent);
+  color: var(--txt2);
+}
+.release-body hr { border: 0; border-top: 1px solid var(--hairline); margin: 16px 0; }
+.release-body table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 12.5px; }
+.release-body th, .release-body td { padding: 7px 8px; border: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.release-body th { color: var(--txt); background: var(--chip); font-weight: 650; }
+.release-notice { color: #30d158; border-top: 1px solid var(--hairline); padding-top: 10px; }

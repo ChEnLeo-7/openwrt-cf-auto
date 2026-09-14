@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -78,13 +79,25 @@ func cfstLatestVersion(proxyURL string) (string, error) {
 	return rel.TagName, nil
 }
 
-// appLatestRelease 查询本程序（openwrt-cf-auto）最新 Release
-func appLatestRelease(proxyURL string) (appRelease, error) {
+func appReleaseEndpoint(tag string) string {
+	endpoint := "https://api.github.com/repos/ChEnLeo-7/openwrt-cf-auto/releases/latest"
+	if tag == "" {
+		return endpoint
+	}
+	tag = strings.TrimSpace(tag)
+	if !strings.HasPrefix(tag, "v") {
+		tag = "v" + tag
+	}
+	return "https://api.github.com/repos/ChEnLeo-7/openwrt-cf-auto/releases/tags/" + url.PathEscape(tag)
+}
+
+// appReleaseForTag 查询本程序指定 tag 的 Release；tag 为空时查询最新 Release。
+func appReleaseForTag(tag, proxyURL string) (appRelease, error) {
 	cli, err := ghClient(proxyURL)
 	if err != nil {
 		return appRelease{}, err
 	}
-	req, _ := http.NewRequest("GET", "https://api.github.com/repos/ChEnLeo-7/openwrt-cf-auto/releases/latest", nil)
+	req, _ := http.NewRequest("GET", appReleaseEndpoint(tag), nil)
 	req.Header.Set("User-Agent", "cf-auto")
 	resp, err := cli.Do(req)
 	if err != nil {
@@ -102,6 +115,11 @@ func appLatestRelease(proxyURL string) (appRelease, error) {
 		return appRelease{}, fmt.Errorf("未能获取最新版本号")
 	}
 	return rel, nil
+}
+
+// appLatestRelease 查询本程序（openwrt-cf-auto）最新 Release。
+func appLatestRelease(proxyURL string) (appRelease, error) {
+	return appReleaseForTag("", proxyURL)
 }
 
 func isNewerVersion(current, latest string) bool {

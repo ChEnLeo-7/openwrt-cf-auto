@@ -176,6 +176,7 @@
       <small data-i18n="eng.autoupdate_hint"></small>
     </div>
     <span class="grow"></span>
+    <button class="btn-ghost" id="btn-app-release-view" data-i18n="app.release_view"></button>
     <button class="btn-ghost" id="btn-app-check" data-i18n="app.check"></button>
     <span class="switch"><input type="checkbox" id="cfg-autoupdate"><i></i></span>
   </div>
@@ -231,11 +232,12 @@
 <div id="rel-scrim" class="modal-scrim hide">
   <div class="modal-card">
     <h3 id="rel-title"></h3>
-    <pre id="rel-body" class="release-body"></pre>
+    <article id="rel-body" class="release-body"></article>
     <div class="btnrow big">
       <a id="rel-link" class="btn-primary" target="_blank" rel="noopener" data-i18n="rel.goto"></a>
       <button class="btn-primary" id="rel-install" data-i18n="rel.install"></button>
       <button class="btn-ghost" id="rel-skip" data-i18n="rel.skip"></button>
+      <button class="btn-ghost" id="rel-close" data-i18n="rel.close"></button>
     </div>
   </div>
 </div>

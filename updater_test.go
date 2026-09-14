@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestIsNewerVersion(t *testing.T) {
 	tests := []struct {
@@ -17,6 +20,18 @@ func TestIsNewerVersion(t *testing.T) {
 	for _, tt := range tests {
 		if got := isNewerVersion(tt.current, tt.latest); got != tt.want {
 			t.Errorf("isNewerVersion(%q, %q) = %v, want %v", tt.current, tt.latest, got, tt.want)
+		}
+	}
+}
+
+func TestAppReleaseEndpoint(t *testing.T) {
+	if got := appReleaseEndpoint(""); !strings.HasSuffix(got, "/releases/latest") {
+		t.Fatalf("latest endpoint = %q", got)
+	}
+	for _, tag := range []string{"0.3.2", "v0.3.2"} {
+		got := appReleaseEndpoint(tag)
+		if !strings.HasSuffix(got, "/releases/tags/v0.3.2") {
+			t.Fatalf("tag endpoint for %q = %q", tag, got)
 		}
 	}
 }
