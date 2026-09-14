@@ -8,7 +8,7 @@
 
 [简体中文](README.md) | **English**
 
-[![version](https://img.shields.io/badge/version-0.3.2-4f8cff)](#installation)
+[![version](https://img.shields.io/badge/version-0.3.3-4f8cff)](#installation)
 [![platform](https://img.shields.io/badge/platform-OpenWrt%2023.05%2B-00b3a4)](#installation)
 [![arch](https://img.shields.io/badge/arch-x86_64%20%7C%20aarch64-8a63ff)](#installation)
 [![engine](https://img.shields.io/badge/engine-CloudflareSpeedTest%20v2.3.5-ffb454)](#engine)
@@ -37,6 +37,7 @@ The complete selection process runs on your own connection, so the measured late
 - 🛑 **One-click stop**: cancel a running optimization from the Overview page at any time — accidental clicks are harmless and nothing is saved.
 - 🌏 **Automatic region enrichment**: even without region targeting, each listed IP's real landing colo is resolved via `cdn-cgi/trace`.
 - 📍 **Region targeting**: filter by the actual Cloudflare colo using HTTPING and `-cfcolo` (SIN, NRT, KIX, HKG, and more), with a configurable minimum per region.
+- 🌎 **Country-code filtering**: enter an ISO two-letter country code such as `US|United States` to cover all known Cloudflare colos in that country.
 - 🏷️ **Colo explanations**: common Cloudflare colo codes have localized labels such as `SIN | Singapore`; custom `CODE|Name` entries are supported and persisted.
 - 🔄 **Two update modes**: overwrite (each run rebuilds the board from the latest results) or merge (merge-and-decay for a smoothly evolving pool).
 - 🧪 **HTTP-mode latency test**: lines where direct TCP connections to Cloudflare all time out can switch to HTTPING with one toggle.
@@ -52,8 +53,8 @@ The complete selection process runs on your own connection, so the measured late
 ## Installation
 
 ```sh
-opkg install cf-auto_0.3.2_x86_64.ipk    # x86_64 router
-opkg install cf-auto_0.3.2_aarch64.ipk   # ARM64 device, such as an N1
+opkg install cf-auto_0.3.3_x86_64.ipk    # x86_64 router
+opkg install cf-auto_0.3.3_aarch64.ipk   # ARM64 device, such as an N1
 ```
 
 Installation registers and enables the procd service. Open the panel at `http://ROUTER_IP:7800`.
@@ -120,7 +121,7 @@ On the first build, `build.ps1` downloads the matching engine binaries from GitH
 ## Build
 
 ```powershell
-.\build.ps1 -Version 0.3.2    # Download the engine and cross-compile both IPK architectures
+.\build.ps1 -Version 0.3.3    # Download the engine and cross-compile both IPK architectures
 ```
 
 ## License

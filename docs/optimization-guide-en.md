@@ -60,6 +60,7 @@ https://bestcf.pages.dev/cmliu/all.txt
 When enabled, results are filtered by the real landing colo: cf-auto tests with HTTPING and reads the Cloudflare `cf-ray` colo code, keeping only IPs that land in the selected regions (the `-cfcolo` parameter).
 
 - Common regions: `SIN` Singapore, `NRT` Tokyo, `KIX` Osaka, `HKG` Hong Kong, `LAX` Los Angeles, `SJC` San Jose, `SEA` Seattle, `FRA` Frankfurt; custom entries use `CODE|Name` (for example `YYY|Italy`)
+- **Country codes**: enter an ISO 3166-1 alpha-2 code such as `US|United States`. cf-auto expands it to the known Cloudflare colos for that country before passing the list to `-cfcolo`, so individual `LAX/SJC/SEA` entries are not required. An unmapped two-letter code is passed through as a normal colo.
 - **Minimum results per region** (default 3) keeps small regions represented when TopN would otherwise crowd them out
 - **Important**: your line's Cloudflare egress colo is decided by your provider's routing and can change over time. If a region keeps reporting "0 qualified this round (this line may not route to XX); skipped", deselect that region or turn region targeting off
 - Region targeting adds HTTPING time; multiple regions x multiple ports multiply the run duration

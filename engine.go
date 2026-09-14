@@ -160,7 +160,7 @@ func runCfst(ctx context.Context, cfg *Config, port int, region string, listFile
 		args = append(args, "-httping")
 	}
 	if region != "" {
-		args = append(args, "-cfcolo", region)
+		args = append(args, "-cfcolo", expandColoFilter(region))
 	}
 	if cfg.Method == "bandwidth" {
 		args = append(args, "-url", cfg.Cfst.URL, "-dn", strconv.Itoa(cfg.Cfst.DN), "-dt", strconv.Itoa(cfg.Cfst.DT))
